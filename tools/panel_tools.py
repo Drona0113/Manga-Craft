@@ -76,3 +76,71 @@ ANALYZE_PANEL_TOOL = {
         }
     }
 }
+
+def composition_analysis(image_path: str) -> str:
+    """
+    Analyze the visual composition of an uploaded manga panel.
+    """
+
+    image_data = encode_image(image_path)
+
+    response = openrouter.chat.completions.create(
+        model=config.MODEL,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": """
+Analyze the composition of this manga panel.
+
+Focus specifically on:
+
+- Rule of thirds
+- Focal point
+- Visual balance
+- Leading lines
+- Negative space
+- Foreground, midground, and background
+- Character placement within the frame
+- Size and spatial relationships
+- Direction of the viewer's eye movement
+- How effectively the composition supports the scene
+
+Do not invent details that are not clearly visible.
+
+Return a concise but useful composition analysis that
+another LLM can use to give manga composition advice.
+"""
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_data
+                        }
+                    }
+                ]
+            }
+        ],
+        max_completion_tokens=1500
+    )
+
+    return response.choices[0].message.content
+
+COMPOSITION_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "composition_analysis",
+        "description": (
+            "Analyze the visual composition of the manga panel "
+            "uploaded by the user. The application provides the "
+            "uploaded image automatically."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False
+        }
+    }
+}

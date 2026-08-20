@@ -5,7 +5,7 @@
 from prompts import build_system_prompt
 from openai import OpenAI
 import config 
-from tools.panel_tools import (analyze_panel,ANALYZE_PANEL_TOOL)
+from tools.panel_tools import (analyze_panel,ANALYZE_PANEL_TOOL,composition_analysis,COMPOSITION_TOOL)
 import json
 from utils.image_utils import encode_image
 
@@ -18,7 +18,13 @@ openrouter = OpenAI(
 
 TOOL_MAP = {
     "analyze_panel": analyze_panel,
+    "composition_analysis":composition_analysis,
 }
+
+tools=[
+    ANALYZE_PANEL_TOOL,
+    COMPOSITION_TOOL
+]
 
 def handle_tool_call(tool_call,panel_image):
     print("🔥 HANDLE TOOL CALL EXECUTED")
@@ -34,9 +40,15 @@ def handle_tool_call(tool_call,panel_image):
             "tool_call_id": tool_call.id
         }
 
+    if fn_name in ["analyze_panel", "composition_analysis"] and not panel_image:
+        return {
+            "role": "tool",
+            "content": "No current panel is selected.",
+            "tool_call_id": tool_call.id
+        }
     args = json.loads(tool_call.function.arguments)
      # The uploaded image comes from the application,not from the LLM.
-    if fn_name == "analyze_panel":
+    if fn_name in ["analyze_panel","composition_analysis"]:
         #args["image_path"] = panel_image
         args = {
         "image_path": panel_image
@@ -104,15 +116,23 @@ def craft_response(message, history,panel_image):
     )
 
     messages = ([{"role": "system", "content": relevant_system_prompt}] + history + [{"role": "user", "content":user_content}])
+    if panel_image:
+        response = openrouter.chat.completions.create(
+            model=config.MODEL,
+            messages=messages,
+            max_completion_tokens=2000,
+            tools=tools,
+            #stream=True
+        )
+    else:
+        response = openrouter.chat.completions.create(
+                    model=config.MODEL,
+                    messages=messages,
+                    max_completion_tokens=2000,
+        )
 
-    response = openrouter.chat.completions.create(
-        model=config.MODEL,
-        messages=messages,
-        max_completion_tokens=2000,
-        
-        #stream=True
-        
-    )
+
+    
     print("FULL RESPONSE:", response)
     print("FINISH REASON:", response.choices[0].finish_reason)
     print("TOOL CALLS:", response.choices[0].message.tool_calls)
@@ -138,9 +158,17 @@ def craft_response(message, history,panel_image):
         response = openrouter.chat.completions.create(
             model=config.MODEL,
             messages=messages,
-            tools=[ANALYZE_PANEL_TOOL],
+            tools=tools,
             max_completion_tokens=2000,
         )
+        print("AFTER TOOL RESPONSE:", response)
+        print("AFTER TOOL FINISH:", response.choices[0].finish_reason)
+        print("AFTER TOOL CONTENT:", response.choices[0].message.content)
+        print("AFTER TOOL CALLS:", response.choices[0].message.tool_calls)
+    final_message = response.choices[0].message
 
-    return response.choices[0].message.content
+    if final_message.content is None:
+        return "I couldn't generate a final response after analyzing the panel."
+
+    return final_message.content
 
