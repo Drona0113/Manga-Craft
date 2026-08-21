@@ -46,6 +46,20 @@ When analyzing an uploaded manga panel:
   positioning, gestures, facial expressions, lighting, shading, and visual flow.
 - Separate observations from interpretations when useful.
 
+### Tool Results
+
+When a tool is used:
+
+- Treat the tool result as the authoritative visual analysis.
+- Do not introduce new visual observations that are not present in the tool result.
+- Do not infer character identities, story events, emotions, or narrative meaning
+  unless the tool result explicitly supports them.
+- Preserve important details from the tool result.
+- You may reorganize, clarify, or explain the tool result to answer the user's
+  question naturally.
+- If the user asks specifically about composition, prioritize the composition
+  information from the tool result rather than adding unrelated analysis.
+
 ### Factual Identification
 
 - Do not guess exact chapter numbers, episode numbers, publication details,
@@ -57,84 +71,89 @@ When analyzing an uploaded manga panel:
   explain what evidence supports the identification.
 - Never increase confidence merely because the image resembles a known manga,
   anime, or art style.
+
+  
 """
 
 
+
+# def build_system_prompt(message):
+#     relevant_system_prompt = SYSTEM_PROMPT
+
+#     if "action" in message.lower():
+#         relevant_system_prompt += """
+# For action scenes, focus on dynamic poses, body movement,
+# perspective, impact, motion lines, and panel composition.
+# Suggest camera angles that make the action feel energetic
+# and visually clear.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["perspective", "vanishing point", "foreshortening"]):
+#         relevant_system_prompt += """
+# When discussing perspective, explain vanishing points,
+# horizon lines, depth, scale, and foreshortening.
+# Explain how objects and characters should change in size
+# and shape as their distance from the viewer changes.
+# Give practical advice that can be applied while drawing.
+# """
+
+#     if "composition" in message.lower():
+#         relevant_system_prompt += """
+# When discussing composition, explain how to arrange
+# characters, objects, foreground, midground, background,
+# and negative space. Help establish a clear focal point
+# and guide the reader's eye through the panel.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["facial expression", "facial expressions", "expression"]):
+#         relevant_system_prompt += """
+# When discussing facial expressions, focus on the eyes,
+# eyebrows, mouth, head angle, and subtle changes in facial
+# features. Explain how these elements communicate emotions
+# clearly in a manga panel.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["background", "environment", "setting"]):
+#         relevant_system_prompt += """
+# When discussing backgrounds, explain how the environment
+# can establish location, depth, atmosphere, and mood.
+# Suggest important environmental details while avoiding
+# unnecessary details that could distract from the characters.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["camera angle", "camera", "shot"]):
+#         relevant_system_prompt += """
+# When discussing camera angles, recommend an appropriate
+# viewpoint such as eye-level, low-angle, high-angle,
+# bird's-eye view, or Dutch angle based on the intended
+# emotion and storytelling purpose. Explain why the chosen
+# viewpoint works for the scene.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["lighting", "light", "illumination"]):
+#         relevant_system_prompt += """
+# When discussing lighting, explain the direction, intensity,
+# and quality of light and how it affects the mood, depth,
+# and readability of the manga panel. Consider how light
+# interacts with the characters and environment.
+# """
+
+#     if any(word in message.lower() for word in
+#            ["shadow", "shadows", "shading"]):
+#         relevant_system_prompt += """
+# When discussing shadows or shading, explain where shadows
+# should fall based on the light source, how they can create
+# depth and volume, and how hard or soft shadows can influence
+# the mood of the scene. Consider cast shadows, form shadows,
+# and strong manga-style contrast when appropriate.
+# """
+
+#     return relevant_system_prompt
 
 def build_system_prompt(message):
-    relevant_system_prompt = SYSTEM_PROMPT
-
-    if "action" in message.lower():
-        relevant_system_prompt += """
-For action scenes, focus on dynamic poses, body movement,
-perspective, impact, motion lines, and panel composition.
-Suggest camera angles that make the action feel energetic
-and visually clear.
-"""
-
-    if any(word in message.lower() for word in
-           ["perspective", "vanishing point", "foreshortening"]):
-        relevant_system_prompt += """
-When discussing perspective, explain vanishing points,
-horizon lines, depth, scale, and foreshortening.
-Explain how objects and characters should change in size
-and shape as their distance from the viewer changes.
-Give practical advice that can be applied while drawing.
-"""
-
-    if "composition" in message.lower():
-        relevant_system_prompt += """
-When discussing composition, explain how to arrange
-characters, objects, foreground, midground, background,
-and negative space. Help establish a clear focal point
-and guide the reader's eye through the panel.
-"""
-
-    if any(word in message.lower() for word in
-           ["facial expression", "facial expressions", "expression"]):
-        relevant_system_prompt += """
-When discussing facial expressions, focus on the eyes,
-eyebrows, mouth, head angle, and subtle changes in facial
-features. Explain how these elements communicate emotions
-clearly in a manga panel.
-"""
-
-    if any(word in message.lower() for word in
-           ["background", "environment", "setting"]):
-        relevant_system_prompt += """
-When discussing backgrounds, explain how the environment
-can establish location, depth, atmosphere, and mood.
-Suggest important environmental details while avoiding
-unnecessary details that could distract from the characters.
-"""
-
-    if any(word in message.lower() for word in
-           ["camera angle", "camera", "shot"]):
-        relevant_system_prompt += """
-When discussing camera angles, recommend an appropriate
-viewpoint such as eye-level, low-angle, high-angle,
-bird's-eye view, or Dutch angle based on the intended
-emotion and storytelling purpose. Explain why the chosen
-viewpoint works for the scene.
-"""
-
-    if any(word in message.lower() for word in
-           ["lighting", "light", "illumination"]):
-        relevant_system_prompt += """
-When discussing lighting, explain the direction, intensity,
-and quality of light and how it affects the mood, depth,
-and readability of the manga panel. Consider how light
-interacts with the characters and environment.
-"""
-
-    if any(word in message.lower() for word in
-           ["shadow", "shadows", "shading"]):
-        relevant_system_prompt += """
-When discussing shadows or shading, explain where shadows
-should fall based on the light source, how they can create
-depth and volume, and how hard or soft shadows can influence
-the mood of the scene. Consider cast shadows, form shadows,
-and strong manga-style contrast when appropriate.
-"""
-
-    return relevant_system_prompt
+    return SYSTEM_PROMPT

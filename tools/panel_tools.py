@@ -1,3 +1,5 @@
+# panel_tools.py
+
 from openai import OpenAI
 
 import config
@@ -42,7 +44,7 @@ Focus on:
 
 Do not invent details that are not clearly visible.
 
-Return a concise but useful analysis that another LLM
+Return a detailed, structured visual analysis that another LLM
 can use to answer the user's manga-related questions.
 """
                     },
@@ -55,7 +57,7 @@ can use to answer the user's manga-related questions.
                 ]
             }
         ],
-        max_completion_tokens=1500
+        max_completion_tokens=2000
     )
 
     return response.choices[0].message.content

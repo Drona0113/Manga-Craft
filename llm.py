@@ -92,79 +92,176 @@ def clean_history(history):
 
     return cleaned
 
-def craft_response(message, history,panel_image):
-    #history = [{"role": h["role"], "content": h["content"]} for h in history]
-    history = clean_history(history)
-    relevant_system_prompt=build_system_prompt(message)
-    user_content = [
+def assistant_tool_message(assistant_message):
+    return {
+        "role": "assistant",
+        "content": assistant_message.content,
+        "tool_calls": [
             {
-        "type": "text",
-        "text": message
+                "id": call.id,
+                "type": "function",
+                "function": {
+                    "name": call.function.name,
+                    "arguments": call.function.arguments
+                }
             }
+            for call in (assistant_message.tool_calls or [])
+        ]
+    }
+
+
+def craft_response(message, history, panel_image):
+
+    history = clean_history(history)
+
+    relevant_system_prompt = build_system_prompt(message)
+
+    user_content = [
+        {
+            "type": "text",
+            "text": message
+        }
     ]
 
+    # IMPORTANT:
+    # For now, we are still sending the image to the first LLM.
+    # We'll change this architecture after tool calling is stable.
     if panel_image:
         image_data = encode_image(panel_image)
 
         user_content.append(
-        {
-            "type": "image_url",
-            "image_url": {
-                "url": image_data
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": image_data
+                }
             }
-        }
+        )
+
+    messages = (
+        [{"role": "system", "content": relevant_system_prompt}]
+        + history
+        + [{"role": "user", "content": user_content}]
     )
 
-    messages = ([{"role": "system", "content": relevant_system_prompt}] + history + [{"role": "user", "content":user_content}])
+    # ============================================================
+    # FIRST LLM CALL
+    # ============================================================
+
     if panel_image:
         response = openrouter.chat.completions.create(
             model=config.MODEL,
             messages=messages,
             max_completion_tokens=2000,
-            tools=tools,
-            #stream=True
+            tools=tools
         )
     else:
         response = openrouter.chat.completions.create(
-                    model=config.MODEL,
-                    messages=messages,
-                    max_completion_tokens=2000,
+            model=config.MODEL,
+            messages=messages,
+            max_completion_tokens=2000
         )
 
-
-    
-    print("FULL RESPONSE:", response)
+    print("\n========== FIRST LLM RESPONSE ==========")
     print("FINISH REASON:", response.choices[0].finish_reason)
     print("TOOL CALLS:", response.choices[0].message.tool_calls)
     print("MESSAGE:", response.choices[0].message)
+    print("========================================\n")
 
-    # full_response = ""
+    # ============================================================
+    # TOOL-CALL LOOP
+    # ============================================================
 
-    # for chunk in response:
-    #     content = chunk.choices[0].delta.content
-
-    #     if content:
-    #         full_response += content
-    #         yield full_response
     while response.choices[0].finish_reason == "tool_calls":
 
         assistant_message = response.choices[0].message
+        # Add the assistant's tool-call message to conversation
+        messages.append(
+            assistant_tool_message(assistant_message)
+        )
 
-        tool_results = handle_tool_calls(assistant_message,panel_image)
+        
+        # Execute ALL requested tools
 
-        messages.append(assistant_message)
+        tool_results = handle_tool_calls(
+            assistant_message,
+            panel_image
+        )
+
+        # Add ALL tool results
         messages.extend(tool_results)
 
+       # ========================================================
+        # RETURN TOOL RESULTS DIRECTLY
+        # ========================================================
+
+        print("\n========== TOOLS EXECUTED ==========")
+
+        for result in tool_results:
+            print(
+            "TOOL RESULT:",
+            result["tool_call_id"],
+            "LENGTH:",
+            len(result["content"])
+            )
+
+        print("=====================================\n")
+
+        for result in tool_results:
+            print(
+                "TOOL RESULT:",
+                result["tool_call_id"],
+                "LENGTH:",
+                len(result["content"])
+            )
+
+        print("=====================================\n")
+        # ========================================================
+        # SINGLE TOOL → DIRECT TOOL RESULT
+        # ========================================================
+
+        if len(tool_results) == 1:
+            return tool_results[0]["content"]
+
+
+# ========================================================
+# MULTIPLE TOOLS → SYNTHESIS LLM
+# ========================================================
+
+        messages.append({
+                "role": "user",
+                "content": """
+Using the tool results above, answer the user's original request.
+
+Combine the results from ALL tools that were executed.
+
+Preserve the context of the user's original request and conversation history.
+
+Do not ignore any tool result.
+
+Give one coherent answer that is understandable to the user.
+
+Use the tool results as the primary source of visual information.
+Do not invent visual details that are not supported by the tool results.
+"""
+        })
+        print("\n🔥 MULTIPLE TOOLS → CALLING SYNTHESIS LLM\n")
         response = openrouter.chat.completions.create(
             model=config.MODEL,
             messages=messages,
-            tools=tools,
-            max_completion_tokens=2000,
+            max_completion_tokens=2000
         )
-        print("AFTER TOOL RESPONSE:", response)
-        print("AFTER TOOL FINISH:", response.choices[0].finish_reason)
-        print("AFTER TOOL CONTENT:", response.choices[0].message.content)
-        print("AFTER TOOL CALLS:", response.choices[0].message.tool_calls)
+
+        print("\n========== SYNTHESIS LLM RESPONSE ==========")
+        print("FINISH REASON:", response.choices[0].finish_reason)
+        print("TOOL CALLS:", response.choices[0].message.tool_calls)
+        print("CONTENT:", response.choices[0].message.content)
+        print("========================================\n")
+
+    # ============================================================
+    # FINAL RESPONSE
+    # ============================================================
+
     final_message = response.choices[0].message
 
     if final_message.content is None:

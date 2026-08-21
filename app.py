@@ -35,7 +35,9 @@ def chat_response(message, history, current_panel):
 
 def analyze_panel_action(panel_image, history):
     history = history or []
-
+    print("\n========== DIRECT BUTTON ==========")
+    print("Panel:", panel_image)
+    print("===================================\n")
     if not panel_image:
         return history + [
             {
@@ -46,7 +48,9 @@ def analyze_panel_action(panel_image, history):
 
     # Explicitly execute the panel-analysis tool
     result = analyze_panel(panel_image)
-
+    print("DIRECT TOOL RESULT:")
+    print(result)
+    print("===================================\n")
     return history + [
         {
             "role": "user",
@@ -64,7 +68,9 @@ def analyze_panel_action(panel_image, history):
 
 def composition_analysis_action(panel_image, history):
     history = history or []
-
+    print("\n========== DIRECT BUTTON ==========")
+    print("Panel:", panel_image)
+    print("===================================\n")
     if not panel_image:
         return history + [
             {
@@ -74,6 +80,9 @@ def composition_analysis_action(panel_image, history):
         ]
 
     result = composition_analysis(panel_image)
+    print("DIRECT TOOL RESULT:")
+    print(result)
+    print("===================================\n")
 
     return history + [
         {
@@ -91,22 +100,22 @@ def composition_analysis_action(panel_image, history):
 
 def use_panel(panel_image):
     if not panel_image:
-        return None, "**Current Panel:** None"
+        return None, "**Selected Panel:** None"
 
     filename = panel_image.split("\\")[-1]
-    return panel_image, f"**Current Panel:** `{filename}`"
+    return panel_image, f"**Selected Panel:** `{filename}`"
 
 
 def clear_panel():
-    return None, "**Current Panel:** None"
+    return None, "**Selected Panel:** None"
 
+def update_panel_image_text(panel_image):
+    if not panel_image:
+        return "**Panel Image:** None"
 
-def handle_panel_change(panel_image):
-    if panel_image is None:
-        return None, "**Current Panel:** None"
+    filename = panel_image.split("\\")[-1]
 
-    return gr.skip(), gr.skip()
-
+    return f"**Panel Image:** `{filename}`"
 
 with gr.Blocks(title="MangaCraft") as demo:
 
@@ -126,9 +135,15 @@ with gr.Blocks(title="MangaCraft") as demo:
                 type="filepath",
                 height=400
             )
-            current_panel = gr.State(value=None)
+            panel_image_text = gr.Markdown("**Panel Image:** None")
+            selected_panel = gr.State(value=None)
+            selected_panel_text = gr.Markdown("**Selected Panel:** None")
 
-            current_panel_text = gr.Markdown("**Current Panel:** None")
+            panel_image.change(
+                fn=update_panel_image_text,
+                inputs=panel_image,
+                outputs=panel_image_text
+            )
 
             with gr.Row():
                 use_panel_btn = gr.Button("📎 Use Panel")
@@ -137,13 +152,13 @@ with gr.Blocks(title="MangaCraft") as demo:
             use_panel_btn.click(
                 fn=use_panel,
                 inputs=panel_image,
-                outputs=[current_panel, current_panel_text]
+                outputs=[selected_panel, selected_panel_text]
             )
 
             clear_panel_btn.click(
                 fn=clear_panel,
                 inputs=None,
-                outputs=[current_panel, current_panel_text]
+                outputs=[selected_panel, selected_panel_text]
             )
 
             gr.Markdown("### Panel Tools")
@@ -183,14 +198,14 @@ with gr.Blocks(title="MangaCraft") as demo:
                 # Send button
                 send_event = send_btn.click(
                     fn=chat_response,
-                    inputs=[message, chatbot, current_panel],
+                    inputs=[message, chatbot, selected_panel],
                     outputs=chatbot
                 )
 
                 # Enter key
                 enter_event = message.submit(
                     fn=chat_response,
-                    inputs=[message, chatbot, current_panel],
+                    inputs=[message, chatbot, selected_panel],
                     outputs=chatbot
                 )
 
@@ -212,11 +227,7 @@ with gr.Blocks(title="MangaCraft") as demo:
                         inputs=[panel_image, chatbot],
                         outputs=chatbot
                 )
-                panel_image.change(
-                    fn=handle_panel_change,
-                    inputs=panel_image,
-                    outputs=[current_panel, current_panel_text]
-                )
+                
                 composition_btn.click(
                     fn=composition_analysis_action,
                     inputs=[panel_image, chatbot],
