@@ -5,23 +5,38 @@
 import gradio as gr
 
 from llm import craft_response
-from tools.panel_tools import analyze_panel,composition_analysis
+from tools.panel_tools import analyze_panel,composition_analysis,generate_reference
 
-def chat_response(message, history, current_panel):
+def chat_response(message, history, panel_image, selected_panel, conversation_history):
+
+    print("\n========== CHAT RESPONSE ==========")
+    print("MESSAGE:", message)
+    print("CHATBOT HISTORY:", history)
+    print("CONVERSATION HISTORY:", conversation_history)
+    print("PANEL IMAGE:", panel_image)
+    print("SELECTED PANEL:", selected_panel)
+    print("===================================\n")
+
     history = history or []
+    conversation_history = conversation_history or []
 
-    response = craft_response(message, history, current_panel)
+    response = craft_response(
+        message,
+        conversation_history,
+        panel_image=panel_image,
+        selected_image=selected_panel
+    )
 
     user_content = []
 
-    if current_panel:
+    if selected_panel:
         user_content.append(
-            {"path": current_panel}
+            {"path": selected_panel}
         )
 
     user_content.append(message)
 
-    return history + [
+    updated_history = conversation_history + [
         {
             "role": "user",
             "content": user_content
@@ -32,6 +47,11 @@ def chat_response(message, history, current_panel):
         }
     ]
 
+    print("\n========== UPDATED CONVERSATION HISTORY ==========")
+    print(updated_history)
+    print("==================================================\n")
+
+    return updated_history, updated_history
 
 def analyze_panel_action(panel_image, history):
     history = history or []
@@ -117,6 +137,148 @@ def update_panel_image_text(panel_image):
 
     return f"**Panel Image:** `{filename}`"
 
+def generate_reference_action(selected_panel, history):
+
+    print("\n========== GENERATE REFERENCE ==========")
+    print("Selected Panel:", selected_panel)
+
+    print("HISTORY VALUE:")
+    print(history)
+
+    print("HISTORY TYPE:")
+    print(type(history))
+
+    if history:
+        print("HISTORY LENGTH:")
+        print(len(history))
+
+    print("========================================\n")
+    # --------------------------------------------------------
+    # Check selected panel
+    # --------------------------------------------------------
+
+    if not selected_panel:
+        print("❌ No selected panel")
+        return None
+
+    # --------------------------------------------------------
+    # Check history
+    # --------------------------------------------------------
+
+    if not history:
+        print("❌ No chatbot history")
+        return None
+
+    # --------------------------------------------------------
+    # Find the latest textual user request
+    # --------------------------------------------------------
+
+    latest_user_message = None
+
+    for chat_message in reversed(history):
+
+        if chat_message["role"] != "user":
+            continue
+
+        content = chat_message.get("content")
+
+        # ----------------------------------------------------
+        # Normal text message
+        # ----------------------------------------------------
+
+        if isinstance(content, str):
+
+            # Ignore Gradio file URLs
+            if "/gradio_api/file=" not in content:
+                latest_user_message = content
+                break
+
+        # ----------------------------------------------------
+        # Message containing image + text
+        # ----------------------------------------------------
+
+        elif isinstance(content, list):
+
+            text_parts = []
+
+            for item in content:
+
+                # Plain text
+                if isinstance(item, str):
+
+                    if "/gradio_api/file=" not in item:
+                        text_parts.append(item)
+
+                # Image/file dictionary
+                elif isinstance(item, dict):
+
+                    # Ignore image information
+                    if "path" in item:
+                        continue
+
+                    if "url" in item:
+                        continue
+
+            if text_parts:
+
+                latest_user_message = " ".join(text_parts)
+                break
+
+    # --------------------------------------------------------
+    # Debug extracted request
+    # --------------------------------------------------------
+
+    print("\nLATEST USER REQUEST:")
+    print(latest_user_message)
+
+    if not latest_user_message:
+        print("❌ No user request found")
+        return None
+
+    # --------------------------------------------------------
+    # Build image-generation prompt
+    # --------------------------------------------------------
+
+    prompt = f"""
+Create a manga drawing reference based on the selected panel.
+
+User's request:
+{latest_user_message}
+
+Preserve the important visual relationships from the selected panel,
+including the character pose, composition, perspective, character
+placement, and major visual elements unless the user's request
+explicitly asks to change them.
+
+Do not introduce unrelated characters or major elements.
+
+Generate the reference according to the user's request.
+"""
+
+    # --------------------------------------------------------
+    # Debug generation prompt
+    # --------------------------------------------------------
+
+    print("\nREFERENCE PROMPT:")
+    print(prompt)
+
+    # --------------------------------------------------------
+    # Generate reference image
+    # --------------------------------------------------------
+
+    result = generate_reference(
+        selected_panel,
+        prompt
+    )
+
+    print("Generated:", result)
+    print("========================================\n")
+
+    # --------------------------------------------------------
+    # Return generated image path
+    # --------------------------------------------------------
+
+    return result
 with gr.Blocks(title="MangaCraft") as demo:
 
     # ───────────── Header ─────────────
@@ -137,6 +299,7 @@ with gr.Blocks(title="MangaCraft") as demo:
             )
             panel_image_text = gr.Markdown("**Panel Image:** None")
             selected_panel = gr.State(value=None)
+            conversation_history = gr.State(value=[])
             selected_panel_text = gr.Markdown("**Selected Panel:** None")
 
             panel_image.change(
@@ -168,6 +331,14 @@ with gr.Blocks(title="MangaCraft") as demo:
                 composition_btn = gr.Button("📐 Composition")
             
             generate_btn = gr.Button("🎨 Generate Reference")
+            generation_output = gr.Image(
+                label="Generated Reference",
+                type="filepath",
+                height=400
+            )
+            
+           
+
 
         # ═════════════ RIGHT: AI ASSISTANT ═════════════
         with gr.Column(scale=1):
@@ -198,15 +369,15 @@ with gr.Blocks(title="MangaCraft") as demo:
                 # Send button
                 send_event = send_btn.click(
                     fn=chat_response,
-                    inputs=[message, chatbot, selected_panel],
-                    outputs=chatbot
+                    inputs=[message, chatbot, panel_image,selected_panel,conversation_history],
+                    outputs=[chatbot,conversation_history]
                 )
 
                 # Enter key
                 enter_event = message.submit(
                     fn=chat_response,
-                    inputs=[message, chatbot, selected_panel],
-                    outputs=chatbot
+                    inputs=[message, chatbot, panel_image,selected_panel,conversation_history],
+                    outputs=[chatbot,conversation_history]
                 )
 
                 # Clear textbox after sending
@@ -232,6 +403,12 @@ with gr.Blocks(title="MangaCraft") as demo:
                     fn=composition_analysis_action,
                     inputs=[panel_image, chatbot],
                     outputs=chatbot
+                )
+
+                generate_btn.click(
+                    fn=generate_reference_action,
+                    inputs=[selected_panel,conversation_history],
+                    outputs=generation_output
                 )
 
 demo.launch()

@@ -13,3 +13,5 @@ if not OPENROUTER_API_KEY:
 OPENROUTER_URL = "https://openrouter.ai/api/v1"
 
 MODEL = "google/gemini-2.5-flash-lite"
+
+IMAGE_MODEL = "google/gemini-2.5-flash-image"
