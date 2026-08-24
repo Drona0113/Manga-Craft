@@ -75,7 +75,7 @@ def handle_tool_call(tool_call, panel_image, selected_image):
         "composition_analysis"
     ]:
 
-        if not panel_image:
+        if not selected_image:
             return {
                 "role": "tool",
                 "content": "No current panel is available.",
@@ -119,7 +119,7 @@ def handle_tool_call(tool_call, panel_image, selected_image):
         # The LLM does NOT provide the image path.
         # The application provides panel_image.
         args = {
-            "image_path": panel_image
+            "image_path": selected_image
         }
 
     elif fn_name == "generate_reference":
@@ -132,7 +132,24 @@ def handle_tool_call(tool_call, panel_image, selected_image):
     # Execute tool
     # --------------------------------------------------------
 
-    result = TOOL_MAP[fn_name](**args)
+    if fn_name == "generate_reference":
+
+        # Do NOT generate the image here.
+        # The LLM only prepares the generation request.
+        # Actual image generation happens when the user
+        # clicks the "Generate Reference" button.
+
+        result = (
+            "Generation request captured successfully. "
+            "The reference image will be generated when "
+            "the user clicks the Generate Reference button."
+        )
+
+    else:
+
+        # Analyze Panel and Composition execute immediately.
+        result = TOOL_MAP[fn_name](**args)
+
 
     print("🔥 TOOL RESULT:", result)
 
@@ -141,6 +158,8 @@ def handle_tool_call(tool_call, panel_image, selected_image):
         "content": str(result),
         "tool_call_id": tool_call.id
     }
+    
+    
 
 
 # ============================================================
@@ -251,7 +270,7 @@ def craft_response(
     panel_image,
     selected_image
 ):
-
+    generation_request=None
     # --------------------------------------------------------
     # Chatbot requires an explicitly selected panel
     # --------------------------------------------------------
@@ -260,7 +279,8 @@ def craft_response(
 
         return (
             "Please click **📎 Use Panel** "
-            "to select a panel before asking me to analyze it."
+            "to select a panel before asking me to analyze it.",
+            None
         )
 
     # --------------------------------------------------------
@@ -333,11 +353,22 @@ def craft_response(
         response.choices[0].finish_reason
     )
 
+    # print(
+    #     "TOOL CALLS:",
+    #     response.choices[0].message.tool_calls
+    # )
     print(
-        "TOOL CALLS:",
-        response.choices[0].message.tool_calls
-    )
+    "TOOL CALLS:",
+    response.choices[0].message.tool_calls
+)
 
+    for call in (response.choices[0].message.tool_calls or []):
+
+        print("\n🔥 TOOL NAME:")
+        print(call.function.name)
+
+        print("🔥 TOOL ARGUMENTS:")
+        print(call.function.arguments)
     print(
         "MESSAGE:",
         response.choices[0].message
@@ -357,6 +388,23 @@ def craft_response(
     ):
 
         assistant_message = response.choices[0].message
+                # ----------------------------------------------------
+        # Capture generation request
+        # ----------------------------------------------------
+
+        for call in (assistant_message.tool_calls or []):
+
+            if call.function.name == "generate_reference":
+
+                args = json.loads(
+                    call.function.arguments
+                )
+
+                generation_request = args.get("prompt")
+
+                print("\n🎨 GENERATION REQUEST CAPTURED:")
+                print(generation_request)
+                print("================================\n")
 
         # ----------------------------------------------------
         # Add assistant tool-call message
@@ -383,6 +431,25 @@ def craft_response(
         # ----------------------------------------------------
 
         messages.extend(tool_results)
+                # ----------------------------------------------------
+        # GENERATE REFERENCE
+        # ----------------------------------------------------
+        # Generation requests do not need a synthesis LLM call.
+        # The tool only captures the request. The actual image
+        # generation happens when the user clicks the button.
+
+        if generation_request:
+
+            print(
+                "\n🎨 GENERATION REQUEST READY"
+            )
+
+            return (
+                "🎨 Generation request captured!\n\n"
+                "Click **Generate Reference** in the Panel Tools "
+                "to create the image.",
+                generation_request
+            )
 
         print(
             "🔥🔥 REACHED AFTER TOOL RESULTS"
@@ -516,10 +583,11 @@ Important rules:
 
         return (
             "I couldn't generate a final response "
-            "after analyzing the panel."
+            "after analyzing the panel.",
+            generation_request
         )
 
-    return final_message.content
+    return final_message.content,generation_request
 
 
 

@@ -67,10 +67,15 @@ ANALYZE_PANEL_TOOL = {
     "function": {
         "name": "analyze_panel",
         "description": (
-            "Analyze the manga panel uploaded by the user. "
-            "The application provides the uploaded image automatically. "
-            "Do not provide an image URL, image path, or image argument."
-        ),
+        "Use this tool whenever the user asks about visual information "
+        "that must be inspected in the manga panel. This is the general "
+        "visual analysis tool and can analyze camera angle, shot type, "
+        "perspective, framing, composition, character positioning, poses, "
+        "body language, facial expressions, background, lighting, visual "
+        "depth, spatial relationships, and other observable visual details. "
+        "The application provides the panel image automatically. "
+        "Do not provide an image URL, image path, or image argument."
+),
         "parameters": {
             "type": "object",
             "properties": {},
@@ -231,10 +236,17 @@ GENERATE_REFERENCE_TOOL = {
     "function": {
         "name": "generate_reference",
         "description": (
-            "Generate a manga drawing reference based on the "
-            "selected panel and the user's requested changes. "
+            "Generate a manga drawing reference based on the selected "
+            "panel and the user's requested changes. "
             "The application provides the selected panel automatically. "
-            "Do not provide an image URL or image path."
+            "Do not provide an image URL or image path. "
+            "The prompt MUST preserve the selected panel's important "
+            "visual relationships, including the main character/subject, "
+            "pose, composition, perspective, character placement, and "
+            "major visual elements unless the user explicitly asks to "
+            "change them. "
+            "Include the user's requested changes clearly and specifically. "
+            "Do not introduce unrelated characters or major elements."
         ),
         "parameters": {
             "type": "object",
@@ -242,12 +254,13 @@ GENERATE_REFERENCE_TOOL = {
                 "prompt": {
                     "type": "string",
                     "description": (
-                        "Describe the requested manga reference image "
-                        "to generate. Include the user's requested changes "
-                        "to pose, camera angle, perspective, composition, "
+                        "Describe the requested reference image. "
+                        "Start from the selected panel and preserve its "
+                        "important visual relationships. Clearly describe "
+                        "the user's requested changes to camera angle, "
+                        "perspective, pose, movement, composition, "
                         "character positioning, lighting, or other visual "
-                        "elements while preserving the selected panel's "
-                        "important visual relationships."
+                        "elements. Do not invent unrelated elements."
                     )
                 }
             },
