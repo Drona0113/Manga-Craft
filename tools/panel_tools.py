@@ -1,4 +1,4 @@
-# panel_tools.py
+# tools/panel_tools.py
 
 from openai import OpenAI
 
