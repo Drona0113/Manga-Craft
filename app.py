@@ -910,74 +910,625 @@ def save_uploaded_panel(project_id, panel_image):
 
     return str(destination)
 
-with gr.Blocks(title="MangaCraft") as demo:
-    generation_popup = gr.Markdown(
-    "",
-    visible=False
-    )
-    # ───────────── Header ─────────────
-    gr.Markdown("# ✦ MangaCraft ✦")
-    gr.Markdown("### AI Manga Panel Assistant")
+# ============================================================
+# MANGACRAFT UI
+# ============================================================
 
-    with gr.Row():
+CUSTOM_CSS = """
+/* ============================================================
+   GLOBAL
+   ============================================================ */
 
-        # ═════════════ LEFT: MANGA WORKSPACE ═════════════
-        with gr.Column(scale=1):
+body {
+    background: #0f1117 !important;
+    color: #e5e7eb !important;
+}
 
-            gr.Markdown("## Manga Workspace")
-            gr.Markdown("### 📁 Projects")
+.gradio-container {
+    max-width: 1600px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #0f1117 !important;
+}
+
+/* Remove default Gradio white backgrounds */
+
+.gradio-container,
+.gradio-container > div,
+.block,
+.block.gradio-row,
+.block.gradio-column {
+    background: transparent !important;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.mc-header {
+    height: 64px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 24px !important;
+
+    background: #151821 !important;
+
+    border-bottom: 1px solid #292d38;
+}
+
+.mc-logo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #f9fafb;
+}
+
+.mc-project-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #9ca3af;
+}
+
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+
+.mc-main {
+    gap: 0 !important;
+
+    align-items: stretch !important;
+
+    min-height: calc(100vh - 64px);
+
+    background: #0f1117 !important;
+}
+
+
+/* ============================================================
+   PROJECTS
+   ============================================================ */
+
+.mc-projects {
+    background: #151821 !important;
+
+    border-right: 1px solid #292d38;
+
+    padding: 22px 18px !important;
+
+    min-height: calc(100vh - 64px);
+
+    height: auto !important;
+
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   WORKSPACE
+   ============================================================ */
+
+.mc-workspace {
+    background: #10131a !important;
+
+    padding: 24px 28px !important;
+
+    min-height: calc(100vh - 64px);
+
+    height: auto !important;
+
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   AI ASSISTANT
+   ============================================================ */
+
+.mc-assistant {
+    background: #151821 !important;
+
+    border-left: 1px solid #292d38;
+
+    padding: 22px 18px !important;
+
+    min-height: calc(100vh - 64px);
+
+    height: auto !important;
+
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   SECTION HEADERS
+   ============================================================ */
+
+.mc-section-title {
+    font-size: 14px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+
+    color: #f3f4f6;
+
+    margin-bottom: 4px;
+}
+
+.mc-section-subtitle {
+    font-size: 12px;
+
+    color: #6b7280;
+
+    margin-bottom: 16px;
+}
+
+
+/* ============================================================
+   PROJECT AREA
+   ============================================================ */
+
+.mc-project-list {
+    margin-top: 8px;
+}
+
+
+/* Project dropdown */
+
+.mc-projects .gradio-dropdown,
+.mc-projects .gradio-textbox {
+    background: #1b1f29 !important;
+
+    border: 1px solid #2b303c !important;
+
+    color: #e5e7eb !important;
+
+    border-radius: 8px !important;
+}
+
+
+/* ============================================================
+   PROJECT BUTTONS
+   ============================================================ */
+
+.mc-project-actions {
+    margin-top: 12px;
+}
+
+.mc-project-actions button {
+    min-height: 38px !important;
+}
+
+.mc-project-status {
+    font-size: 12px !important;
+    color: #9ca3af !important;
+}
+
+
+/* ============================================================
+   WORKSPACE PANEL
+   ============================================================ */
+
+.mc-panel-card {
+    border: 1px solid #292d38;
+
+    border-radius: 12px;
+
+    background: #171a22 !important;
+
+    padding: 14px;
+
+    margin-top: 12px;
+
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+
+/* Panel image */
+
+.mc-panel-image {
+    background: #0b0d12 !important;
+
+    border-radius: 8px;
+}
+
+.mc-panel-image img {
+    border-radius: 8px;
+
+    object-fit: contain !important;
+}
+
+
+/* Panel information */
+
+.mc-panel-info {
+    font-size: 12px;
+
+    color: #9ca3af;
+
+    margin-top: 6px;
+}
+
+.mc-selected-panel {
+    font-size: 12px;
+
+    color: #9ca3af;
+
+    margin-top: 4px;
+}
+
+
+/* ============================================================
+   PANEL ACTIONS
+   ============================================================ */
+
+.mc-panel-actions {
+    margin-top: 10px;
+}
+
+.mc-panel-actions button {
+    min-height: 40px !important;
+}
+
+
+/* ============================================================
+   PANEL TOOLS
+   ============================================================ */
+
+.mc-panel-tools-title {
+    font-size: 13px;
+
+    font-weight: 700;
+
+    color: #d1d5db;
+
+    margin-top: 20px;
+
+    margin-bottom: 8px;
+}
+
+.mc-tool-row {
+    gap: 8px !important;
+}
+
+.mc-tool-row button {
+    min-height: 40px !important;
+}
+
+
+/* ============================================================
+   GENERATED REFERENCES
+   ============================================================ */
+
+.mc-generated {
+    margin-top: 18px;
+}
+
+.mc-generated .gallery-item {
+    border-radius: 8px !important;
+
+    background: #171a22 !important;
+
+    border: 1px solid #292d38 !important;
+}
+
+
+/* ============================================================
+   AI CHATBOT
+   ============================================================ */
+
+.mc-chatbot {
+    border: 1px solid #292d38 !important;
+
+    border-radius: 12px !important;
+
+    background: #10131a !important;
+
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ============================================================
+   CHAT INPUT
+   ============================================================ */
+
+.mc-chat-input {
+    margin-top: 10px;
+}
+
+.mc-chat-input textarea {
+    border-radius: 10px !important;
+
+    background: #1b1f29 !important;
+
+    border: 1px solid #2b303c !important;
+
+    color: #e5e7eb !important;
+}
+
+
+/* ============================================================
+   GENERAL TEXT INPUTS
+   ============================================================ */
+
+input,
+textarea {
+    background: #1b1f29 !important;
+
+    color: #e5e7eb !important;
+
+    border-color: #2b303c !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #6b7280 !important;
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+button {
+    border-radius: 8px !important;
+}
+
+.mc-primary-btn {
+    min-height: 40px !important;
+}
+
+.mc-secondary-btn {
+    min-height: 40px !important;
+}
+
+
+/* ============================================================
+   MARKDOWN
+   ============================================================ */
+
+.mc-projects h3,
+.mc-workspace h3,
+.mc-assistant h3 {
+    color: #d1d5db !important;
+}
+
+.mc-projects p,
+.mc-workspace p,
+.mc-assistant p {
+    color: #9ca3af;
+}
+
+
+/* ============================================================
+   REMOVE EXCESS SPACING
+   ============================================================ */
+
+.mc-tight {
+    margin: 0 !important;
+
+    padding: 0 !important;
+}
+
+.mc-main {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 0 !important;
+    min-height: calc(100vh - 64px);
+    width: 100% !important;
+}
+
+
+"""
+
+
+
+with gr.Blocks(
+    title="MangaCraft",
+) as demo:
+
+    # ========================================================
+    # HEADER
+    # ========================================================
+
+    with gr.Row(elem_classes="mc-header",equal_height=True):
+
+        gr.HTML(
+            """
+            <div class="mc-logo">
+                ✦ MangaCraft
+            </div>
+            """
+        )
+
+        gr.HTML(
+            """
+            <div class="mc-project-name">
+                AI Manga Workspace
+            </div>
+            """
+        )
+
+    # ========================================================
+    # MAIN APPLICATION
+    # ========================================================
+
+    with gr.Row(
+        elem_classes="mc-main"
+    ):
+
+        # ====================================================
+        # LEFT — PROJECTS
+        # ====================================================
+
+        with gr.Column(
+            scale=2,
+            min_width=0,
+            elem_classes="mc-projects"
+        ):
+
+            gr.HTML(
+                """
+                <div class="mc-section-title">
+                    PROJECTS
+                </div>
+                <div class="mc-section-subtitle">
+                    Your manga projects
+                </div>
+                """
+            )
 
             project_dropdown = gr.Dropdown(
                 label="Current Project",
                 choices=load_projects(),
-                value=None,
-                interactive=True
+                value=get_default_project(),
+                interactive=True,
+                elem_classes="mc-project-list"
             )
-            
+
+            # ------------------------------------------------
+            # NEW PROJECT
+            # ------------------------------------------------
+
+            gr.Markdown(
+                "### New Project",
+                elem_classes="mc-tight"
+            )
+
+            new_project_name = gr.Textbox(
+                placeholder="Project name...",
+                label=""
+            )
+
+            create_project_btn = gr.Button(
+                "＋ New Project",
+                variant="primary",
+                elem_classes="mc-primary-btn"
+            )
+
+            # ------------------------------------------------
+            # PROJECT MANAGEMENT
+            # ------------------------------------------------
+
+            gr.Markdown(
+                "### Manage Project",
+                elem_classes="mc-tight"
+            )
+
+            rename_project_name = gr.Textbox(
+                placeholder="New project name...",
+                label=""
+            )
 
             with gr.Row():
-
-                new_project_name = gr.Textbox(
-                    placeholder="New project name...",
-                    label="",
-                    scale=4
-                )
-
-                create_project_btn = gr.Button(
-                    "＋ Create",
-                    scale=1
-                )
-
-            project_status = gr.Markdown("")
-
-            with gr.Row():
-
-                rename_project_name = gr.Textbox(
-                    placeholder="Rename selected project...",
-                    label="",
-                    scale=4
-                )
 
                 rename_project_btn = gr.Button(
                     "Rename",
-                    scale=1
+                    elem_classes="mc-secondary-btn"
                 )
 
-            delete_project_btn = gr.Button(
-                "🗑 Delete Project"
+                delete_project_btn = gr.Button(
+                    "🗑 Delete",
+                    elem_classes="mc-secondary-btn"
+                )
+
+            project_status = gr.Markdown(
+                "",
+                elem_classes="mc-project-status"
             )
-            panel_image = gr.Image(
-                label="Panel Preview",
-                type="filepath",
-                height=400
+
+        # ====================================================
+        # CENTER — MANGA WORKSPACE
+        # ====================================================
+
+        with gr.Column(
+            scale=5,
+            min_width=0,
+            elem_classes="mc-workspace"
+        ):
+
+            gr.HTML(
+                """
+                <div class="mc-section-title">
+                    MANGA WORKSPACE
+                </div>
+                <div class="mc-section-subtitle">
+                    Work with your manga panel
+                </div>
+                """
             )
-            panel_image_text = gr.Markdown("**Panel Image:** None")
-            selected_panel = gr.State(value=None)
-            generation_request = gr.State(value=None)
-            generated_image=gr.State(value=None)
-            conversation_history = gr.State(value=[])
-            current_project_id = gr.State(value=None)
-            selected_panel_text = gr.Markdown("**Selected Panel:** None")
+
+            # ------------------------------------------------
+            # PANEL
+            # ------------------------------------------------
+
+            with gr.Group(
+                elem_classes="mc-panel-card"
+            ):
+
+                panel_image = gr.Image(
+                    label="Panel",
+                    type="filepath",
+                    height=430,
+                    elem_classes="mc-panel-image"
+                )
+
+                panel_image_text = gr.Markdown(
+                    "**Panel Image:** None",
+                    elem_classes="mc-panel-info"
+                )
+
+                selected_panel = gr.State(
+                    value=None
+                )
+
+                generation_request = gr.State(
+                    value=None
+                )
+
+                generated_image = gr.State(
+                    value=None
+                )
+
+                conversation_history = gr.State(
+                    value=[]
+                )
+
+                current_project_id = gr.State(
+                    value=None
+                )
+
+                selected_panel_text = gr.Markdown(
+                    "**Selected Panel:** None",
+                    elem_classes="mc-selected-panel"
+                )
+
+                # --------------------------------------------
+                # PANEL ACTIONS
+                # --------------------------------------------
+
+                with gr.Row(
+                    elem_classes="mc-panel-actions"
+                ):
+
+                    use_panel_btn = gr.Button(
+                        "📎 Use Panel",
+                        variant="primary"
+                    )
+
+                    clear_panel_btn = gr.Button(
+                        "× Clear"
+                    )
+
+            # ------------------------------------------------
+            # PANEL EVENTS
+            # ------------------------------------------------
 
             panel_image.change(
                 fn=update_panel_image_text,
@@ -985,187 +1536,302 @@ with gr.Blocks(title="MangaCraft") as demo:
                 outputs=panel_image_text
             )
 
-            with gr.Row():
-                use_panel_btn = gr.Button("📎 Use Panel")
-                clear_panel_btn = gr.Button("× Clear")
-
             use_panel_btn.click(
                 fn=use_panel,
                 inputs=panel_image,
-                outputs=[selected_panel, selected_panel_text]
+                outputs=[
+                    selected_panel,
+                    selected_panel_text
+                ]
             )
 
             clear_panel_btn.click(
                 fn=clear_panel,
                 inputs=None,
-                outputs=[selected_panel, selected_panel_text]
+                outputs=[
+                    selected_panel,
+                    selected_panel_text
+                ]
             )
 
-            gr.Markdown("### Panel Tools")
+            # ------------------------------------------------
+            # PANEL TOOLS
+            # ------------------------------------------------
 
-            with gr.Row():
-                analyze_btn = gr.Button("🔍 Analyze Panel")
-                composition_btn = gr.Button("📐 Composition")
-            
-            generate_btn = gr.Button("🎨 Generate Reference")
-            generated_gallery = gr.Gallery(
-                label="Generated References",
-                columns=3,
-                rows=1,
-                height=220,
-                object_fit="contain",
-                allow_preview=True
+            gr.HTML(
+                """
+                <div class="mc-panel-tools-title">
+                    PANEL TOOLS
+                </div>
+                """
             )
-            # generation_output = gr.Image(
-            #     label="Generated Reference",
-            #     type="filepath",
-            #     height=400
-            # )
-            use_generated_btn = gr.Button("📎 Use Generated")
-            
-           
 
+            with gr.Row(
+                elem_classes="mc-tool-row"
+            ):
 
-        # ═════════════ RIGHT: AI ASSISTANT ═════════════
-        with gr.Column(scale=1):
+                analyze_btn = gr.Button(
+                    "🔍 Analyze Panel",
+                    elem_classes="mc-secondary-btn"
+                )
 
-            gr.Markdown("## AI Assistant")
+                composition_btn = gr.Button(
+                    "📐 Composition",
+                    elem_classes="mc-secondary-btn"
+                )
+
+            generate_btn = gr.Button(
+                "🎨 Generate Reference",
+                variant="primary",
+                elem_classes="mc-primary-btn"
+            )
+
+            # ------------------------------------------------
+            # GENERATED REFERENCES
+            # ------------------------------------------------
+
+            with gr.Column(
+                scale=5,
+                min_width=0,
+                elem_classes="mc-generated"
+            ):
+
+                gr.Markdown(
+                    "### Generated References"
+                )
+
+                generated_gallery = gr.Gallery(
+                    label="",
+                    columns=3,
+                    rows=1,
+                    height=220,
+                    object_fit="contain",
+                    allow_preview=True
+                )
+
+                use_generated_btn = gr.Button(
+                    "📎 Use Generated"
+                )
+
+        # ====================================================
+        # RIGHT — AI ASSISTANT
+        # ====================================================
+
+        with gr.Column(
+            scale=3,
+            min_width=0,
+            elem_classes="mc-assistant"
+        ):
+
+            gr.HTML(
+                """
+                <div class="mc-section-title">
+                    AI ASSISTANT
+                </div>
+                <div class="mc-section-subtitle">
+                    Your manga co-pilot
+                </div>
+                """
+            )
 
             chatbot = gr.Chatbot(
                 label="Conversation",
-                height=480,
-               
+                height=650,
+                elem_classes="mc-chatbot"
             )
 
-            with gr.Row():
+            # ------------------------------------------------
+            # CHAT INPUT
+            # ------------------------------------------------
+
+            with gr.Row(
+                elem_classes="mc-chat-input"
+            ):
 
                 message = gr.Textbox(
-                    placeholder="Ask MangaCraft about your manga panel...",
+                    placeholder="Ask MangaCraft...",
                     label="",
                     scale=5,
-                    lines=1
+                    lines=2
                 )
 
                 send_btn = gr.Button(
-                    "➤ Send",
+                    "➤",
                     scale=1,
-                    min_width=100
+                    min_width=55,
+                    variant="primary"
                 )
 
-                # Send button
-                send_event = send_btn.click(
-                    fn=chat_response,
-                    inputs=[message, chatbot, panel_image,selected_panel,conversation_history,project_dropdown],
-                    outputs=[chatbot,conversation_history,generation_request]
-                )
+            # =================================================
+            # CHAT EVENTS
+            # =================================================
 
-                # Enter key
-                enter_event = message.submit(
-                    fn=chat_response,
-                    inputs=[message, chatbot, panel_image,selected_panel,conversation_history,project_dropdown],
-                    outputs=[chatbot,conversation_history,generation_request]
-                )
+            send_event = send_btn.click(
+                fn=chat_response,
+                inputs=[
+                    message,
+                    chatbot,
+                    panel_image,
+                    selected_panel,
+                    conversation_history,
+                    project_dropdown
+                ],
+                outputs=[
+                    chatbot,
+                    conversation_history,
+                    generation_request
+                ]
+            )
 
-                # Clear textbox after sending
-                send_event.then(
-                    fn=lambda: "",
-                    inputs=None,
-                    outputs=message
-                )
+            enter_event = message.submit(
+                fn=chat_response,
+                inputs=[
+                    message,
+                    chatbot,
+                    panel_image,
+                    selected_panel,
+                    conversation_history,
+                    project_dropdown
+                ],
+                outputs=[
+                    chatbot,
+                    conversation_history,
+                    generation_request
+                ]
+            )
 
-                enter_event.then(
-                    fn=lambda: "",
-                    inputs=None,
-                    outputs=message
-                )
-                #Analyse Panel button
-                analyze_btn.click(
-                        fn=analyze_panel_action,
-                        inputs=[panel_image, chatbot],
-                        outputs=chatbot
-                )
-                
-                composition_btn.click(
-                    fn=composition_analysis_action,
-                    inputs=[panel_image, chatbot],
-                    outputs=chatbot
-                )
+            send_event.then(
+                fn=lambda: "",
+                inputs=None,
+                outputs=message
+            )
 
-                generate_btn.click(
-                    fn=test_generate_reference_action,
-                    inputs=[
-                        project_dropdown,
-                        selected_panel,
-                        generation_request
-                    ],
-                    outputs=generated_gallery
-                )
-                use_generated_btn.click(
-                    fn=use_generated,
-                    inputs=generated_image,
-                    outputs=[selected_panel, selected_panel_text]
-                )
+            enter_event.then(
+                fn=lambda: "",
+                inputs=None,
+                outputs=message
+            )
 
-                create_project_btn.click(
-                    fn=create_project_action,
-                    inputs=new_project_name,
-                    outputs=[
-                        project_dropdown,
-                        current_project_id,
-                        project_status
-                    ]
-                )
+            # =================================================
+            # DIRECT PANEL TOOLS
+            # =================================================
 
-                rename_project_btn.click(
-                    fn=rename_project_action,
-                    inputs=[
-                        project_dropdown,
-                        rename_project_name
-                    ],
-                    outputs=[
-                        project_dropdown,
-                        project_status
-                    ]
-                )
+            analyze_btn.click(
+                fn=analyze_panel_action,
+                inputs=[
+                    panel_image,
+                    chatbot
+                ],
+                outputs=chatbot
+            )
 
-                delete_project_btn.click(
-                    fn=delete_project_action,
-                    inputs=project_dropdown,
-                    outputs=[
-                        project_dropdown,
-                        project_status
-                    ]
-                )
+            composition_btn.click(
+                fn=composition_analysis_action,
+                inputs=[
+                    panel_image,
+                    chatbot
+                ],
+                outputs=chatbot
+            )
 
-                project_dropdown.change(
-                    fn=load_project_action,
-                    inputs=project_dropdown,
-                    outputs=[
-                        panel_image,
-                        panel_image_text,
-                        selected_panel,
-                        selected_panel_text,
-                        chatbot,
-                        conversation_history,
-                        generation_request,
-                        generated_gallery
-                    ]
-                )
-                # demo.load(
-                #     fn=load_project_action,
-                #     inputs=project_dropdown,
-                #     outputs=[
-                #         current_project_id,
-                #         selected_panel,
-                #         panel_image,
-                #         conversation_history,
-                #         generation_request,
-                #         generated_image,
-                #         selected_panel_text,
-                #         panel_image_text,
-                #         project_status
-                #     ]
-                # )
+            # =================================================
+            # GENERATE REFERENCE
+            # =================================================
+
+            generate_btn.click(
+                fn=test_generate_reference_action,
+                inputs=[
+                    project_dropdown,
+                    selected_panel,
+                    generation_request
+                ],
+                outputs=generated_gallery
+            )
+
+            # =================================================
+            # USE GENERATED REFERENCE
+            # =================================================
+
+            use_generated_btn.click(
+                fn=use_generated,
+                inputs=generated_image,
+                outputs=[
+                    selected_panel,
+                    selected_panel_text
+                ]
+            )
+
+            # =================================================
+            # PROJECT MANAGEMENT EVENTS
+            # =================================================
+
+            create_project_btn.click(
+                fn=create_project_action,
+                inputs=new_project_name,
+                outputs=[
+                    project_dropdown,
+                    current_project_id,
+                    project_status
+                ]
+            )
+
+            rename_project_btn.click(
+                fn=rename_project_action,
+                inputs=[
+                    project_dropdown,
+                    rename_project_name
+                ],
+                outputs=[
+                    project_dropdown,
+                    project_status
+                ]
+            )
+
+            delete_project_btn.click(
+                fn=delete_project_action,
+                inputs=project_dropdown,
+                outputs=[
+                    project_dropdown,
+                    project_status
+                ]
+            )
+
+            # =================================================
+            # LOAD PROJECT
+            # =================================================
+
+            project_dropdown.change(
+                fn=load_project_action,
+                inputs=project_dropdown,
+                outputs=[
+                    panel_image,
+                    panel_image_text,
+                    selected_panel,
+                    selected_panel_text,
+                    chatbot,
+                    conversation_history,
+                    generation_request,
+                    generated_gallery
+                ]
+            )
+            demo.load(
+                fn=load_project_action,
+                inputs=project_dropdown,
+                outputs=[
+                    panel_image,
+                    panel_image_text,
+                    selected_panel,
+                    selected_panel_text,
+                    chatbot,
+                    conversation_history,
+                    generation_request,
+                    generated_gallery
+                ]
+            )
 
 
-demo.launch()
+# ============================================================
+# LAUNCH
+# ============================================================
+
+demo.launch(css=CUSTOM_CSS)
