@@ -28,7 +28,9 @@ from database.conversation_repository import (
 
 from database.generated_reference_repository import (
     create_generated_reference,
-    get_generated_references
+    get_generated_references,
+    delete_generated_reference,
+    get_generated_reference
 )
 
 def get_or_create_project_conversation(project_id):
@@ -261,18 +263,342 @@ def use_panel(panel_image):
         f"**Selected Panel:** `{filename}`"
     )
 
-    
 
-def use_generated(generated_image):
-    if not generated_image:
-        return None, "**Selected Panel:** None"
+def select_generated_reference(
+    evt: gr.SelectData,
+    selected_indices
+):
+    """
+    Toggle generated references using their Gallery index.
 
-    filename = generated_image.split("\\")[-1]
+    We intentionally use the index instead of the file path
+    because multiple generated references may temporarily
+    point to the same image file during testing.
+    """
+
+    selected_indices = list(
+        selected_indices or []
+    )
+
+    print("\n========== GENERATED REFERENCE SELECTED ==========")
+    print("Selected value:", evt.value)
+    print("Selected index:", evt.index)
+
+    # ----------------------------------------------------
+    # Gradio can return an integer index or sometimes
+    # a tuple/list depending on the component state.
+    # ----------------------------------------------------
+
+    index = evt.index
+
+    if isinstance(index, (list, tuple)):
+        index = index[0]
+
+    if index is None:
+        return (
+            selected_indices,
+            f"✓ {len(selected_indices)} selected"
+        )
+
+    # ----------------------------------------------------
+    # Toggle by INDEX
+    # ----------------------------------------------------
+
+    if index in selected_indices:
+
+        selected_indices.remove(index)
+
+        print("❌ REMOVED INDEX:", index)
+
+    else:
+
+        selected_indices.append(index)
+
+        print("✅ ADDED INDEX:", index)
+
+    # ----------------------------------------------------
+    # Debug
+    # ----------------------------------------------------
+
+    print("\nCURRENT SELECTED REFERENCE INDICES:")
+
+    for selected_index in selected_indices:
+        print(" -", selected_index)
+
+    print(
+        "TOTAL SELECTED:",
+        len(selected_indices)
+    )
+
+    print("==================================================\n")
 
     return (
-        generated_image,
-        f"**Selected Panel:** `{filename}`"
+        selected_indices,
+        f"✓ {len(selected_indices)} selected"
     )
+
+def delete_generated_reference_action(
+    project_choice,
+    evt: gr.EventData,
+    selected_indices
+):
+
+    print("\n========== DELETE GENERATED REFERENCE ==========")
+
+    if not project_choice:
+        print("❌ No project selected.")
+        return [], [], "0 selected"
+
+    if evt is None or evt.file is None:
+        print("❌ No deleted file information.")
+        return gr.update(), selected_indices, f"{len(selected_indices or [])} selected"
+
+    deleted_path = evt.file["path"]
+
+    print("DELETED FILE PATH:", deleted_path)
+
+    project_id = int(
+        project_choice.split("|")[0].strip()
+    )
+
+    print("PROJECT ID:", project_id)
+
+    # ----------------------------------------------------
+    # Find database record using the generated image path
+    # ----------------------------------------------------
+
+    references = get_generated_references(
+        project_id
+    )
+
+    deleted_reference = None
+
+    for reference in references:
+
+        if Path(reference["file_path"]).resolve() == Path(deleted_path).resolve():
+
+            deleted_reference = reference
+            break
+
+    # ----------------------------------------------------
+    # Delete database record
+    # ----------------------------------------------------
+
+    if deleted_reference:
+
+        reference_id = deleted_reference["id"]
+
+        print(
+            "DELETING DATABASE REFERENCE:",
+            reference_id
+        )
+
+        delete_generated_reference(
+            reference_id
+        )
+
+    else:
+
+        print(
+            "⚠️ No database record found for:",
+            deleted_path
+        )
+
+    # ----------------------------------------------------
+    # Delete actual generated image
+    # ----------------------------------------------------
+
+    file_path = Path(deleted_path)
+
+    if file_path.exists():
+
+        try:
+
+            file_path.unlink()
+
+            print(
+                "🗑 IMAGE FILE DELETED:",
+                file_path
+            )
+
+        except Exception as e:
+
+            print(
+                "❌ FILE DELETE ERROR:",
+                e
+            )
+
+    else:
+
+        print(
+            "⚠️ Image file already missing:",
+            file_path
+        )
+
+    # ----------------------------------------------------
+    # Remove deleted index from selection state
+    # ----------------------------------------------------
+
+    selected_indices = list(
+        selected_indices or []
+    )
+
+    # We don't know the gallery index directly from
+    # DeletedFileData, so reload selection safely.
+    #
+    # Existing selected indices are cleared because
+    # gallery ordering may have changed after deletion.
+
+    selected_indices = []
+
+    # ----------------------------------------------------
+    # Reload remaining references
+    # ----------------------------------------------------
+
+    remaining_references = get_generated_references(
+        project_id
+    )
+
+    generated_references = [
+        reference["file_path"]
+        for reference in remaining_references
+    ]
+
+    print(
+        "REMAINING REFERENCES:",
+        len(generated_references)
+    )
+
+    print("===============================================\n")
+
+    return (
+        generated_references,
+        selected_indices,
+        "0 selected"
+    )
+
+
+
+def use_generated(
+    selected_indices,
+    generated_references
+):
+
+    selected_indices = list(
+        selected_indices or []
+    )
+
+    print("\n========== USE GENERATED ==========")
+
+    if not selected_indices:
+
+        print("❌ No generated references selected.")
+        print("===================================\n")
+
+        gr.Warning(
+            "Please select at least one generated reference."
+        )
+
+        return (
+            None,
+            "**Selected Panel:** None"
+        )
+
+    print("SELECTED INDICES:")
+
+    for index in selected_indices:
+        print(" -", index)
+
+    # ----------------------------------------------------
+    # Resolve indices → actual image paths
+    # ----------------------------------------------------
+
+    selected_paths = []
+
+    for index in selected_indices:
+
+        if index >= len(generated_references):
+            continue
+
+        item = generated_references[index]
+
+        # Gallery item may be a dictionary
+        if isinstance(item, dict):
+
+            image_data = item.get("image")
+
+            if isinstance(image_data, dict):
+
+                path = image_data.get("path")
+
+            else:
+
+                path = image_data
+
+        else:
+
+            path = item
+
+        if path:
+            selected_paths.append(path)
+
+    # ----------------------------------------------------
+    # Nothing resolved
+    # ----------------------------------------------------
+
+    if not selected_paths:
+
+        gr.Warning(
+            "Unable to resolve the selected references."
+        )
+
+        return (
+            None,
+            "**Selected Panel:** None"
+        )
+
+    # ----------------------------------------------------
+    # Debug
+    # ----------------------------------------------------
+
+    print("\nRESOLVED SELECTED REFERENCES:")
+
+    for index, path in zip(
+        selected_indices,
+        selected_paths
+    ):
+        print(
+            f" {index} → {path}"
+        )
+
+    print(
+        "TOTAL:",
+        len(selected_paths)
+    )
+
+    print("===================================\n")
+
+    # ----------------------------------------------------
+    # TEMPORARY BEHAVIOR
+    #
+    # Until multi-reference generation is implemented,
+    # use the first selected image as the active panel.
+    #
+    # ALL selected references remain represented by
+    # selected_indices state.
+    # ----------------------------------------------------
+
+    primary_image = selected_paths[0]
+
+    filename = Path(primary_image).name
+
+    return (
+        primary_image,
+        f"**Selected Panel:** `{filename}`  \n"
+        f"**References:** `{len(selected_paths)}` selected"
+    )
+
+
 
 def clear_panel():
     return None, "**Selected Panel:** None"
@@ -714,6 +1040,7 @@ def load_project_action(project_choice):
             [],                    # chatbot
             [],                    # conversation_history
             None,                   # generation_request
+            [],
             []
         )
 
@@ -739,6 +1066,7 @@ def load_project_action(project_choice):
             [],
             [],
             None,
+            [],
             []
         )
 
@@ -794,16 +1122,26 @@ def load_project_action(project_choice):
     references = get_generated_references(project_id)
 
     generated_references = []
+    generated_reference_metadata = []
 
     for reference in references:
 
-        reference_path = reference["file_path"]
-
         generated_references.append(
-            reference_path
+            reference["file_path"]
         )
 
-    print("GENERATED REFERENCES:", len(generated_references))
+        generated_reference_metadata.append(
+            {
+                "id": reference["id"],
+                "file_path": reference["file_path"],
+                "prompt": reference["prompt"]
+            }
+        )
+
+    print(
+        "GENERATED REFERENCES:",
+        len(generated_references)
+    )
 
     # ========================================================
     # CONVERT DATABASE MESSAGES → GRADIO HISTORY
@@ -855,7 +1193,8 @@ def load_project_action(project_choice):
         history,
         history,
         None,
-        generated_references
+        generated_references,
+        generated_reference_metadata
     )
 
 
@@ -1202,19 +1541,24 @@ body {
 
 
 /* ============================================================
-   GENERATED REFERENCES
+   GENERATED REFERENCES HEADER
    ============================================================ */
 
-.mc-generated {
-    margin-top: 18px;
+.mc-generated-header {
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 8px;
 }
 
-.mc-generated .gallery-item {
-    border-radius: 8px !important;
+.mc-generated-title {
+    margin: 0 !important;
+}
 
-    background: #171a22 !important;
-
-    border: 1px solid #292d38 !important;
+.mc-selected-count {
+    font-size: 12px !important;
+    color: #9ca3af !important;
+    text-align: right;
+    margin: 0 !important;
 }
 
 
@@ -1492,8 +1836,11 @@ with gr.Blocks(
                     value=None
                 )
 
-                generated_image = gr.State(
-                    value=None
+                selected_generated_references = gr.State(
+                    value=[]
+                )
+                generated_reference_metadata = gr.State(
+                    value=[]
                 )
 
                 conversation_history = gr.State(
@@ -1596,9 +1943,17 @@ with gr.Blocks(
                 elem_classes="mc-generated"
             ):
 
-                gr.Markdown(
-                    "### Generated References"
-                )
+                with gr.Row(elem_classes="mc-generated-header"):
+
+                    gr.Markdown(
+                        "### Generated References",
+                        elem_classes="mc-generated-title"
+                    )
+
+                    selected_reference_count = gr.Markdown(
+                        "0 selected",
+                        elem_classes="mc-selected-count"
+                    )
 
                 generated_gallery = gr.Gallery(
                     label="",
@@ -1606,13 +1961,35 @@ with gr.Blocks(
                     rows=1,
                     height=220,
                     object_fit="contain",
-                    allow_preview=True
+                    allow_preview=True,
+                    interactive=True
+                )
+
+                generated_gallery.select(
+                    fn=select_generated_reference,
+                    inputs=selected_generated_references,
+                    outputs=[
+                        selected_generated_references,
+                        selected_reference_count
+                    ]
+                )
+                generated_gallery.delete(
+                    fn=delete_generated_reference_action,
+                    inputs=[
+                        project_dropdown,
+                        selected_generated_references
+                    ],
+                    outputs=[
+                        generated_gallery,
+                        selected_generated_references,
+                        selected_reference_count
+                    ]
                 )
 
                 use_generated_btn = gr.Button(
                     "📎 Use Generated"
                 )
-
+                
         # ====================================================
         # RIGHT — AI ASSISTANT
         # ====================================================
@@ -1748,18 +2125,25 @@ with gr.Blocks(
                 outputs=generated_gallery
             )
 
+            
+
             # =================================================
             # USE GENERATED REFERENCE
             # =================================================
 
             use_generated_btn.click(
                 fn=use_generated,
-                inputs=generated_image,
+                inputs=[
+                    selected_generated_references,
+                    generated_gallery
+                ],
                 outputs=[
                     selected_panel,
                     selected_panel_text
                 ]
             )
+    
+
 
             # =================================================
             # PROJECT MANAGEMENT EVENTS
@@ -1811,9 +2195,20 @@ with gr.Blocks(
                     chatbot,
                     conversation_history,
                     generation_request,
-                    generated_gallery
+                    generated_gallery,
+                    generated_reference_metadata
                 ]
+            ).then(
+                fn=lambda: [],
+                inputs=None,
+                outputs=selected_generated_references
+            ).then(
+                fn=lambda: "0 selected",
+                inputs=None,
+                outputs=selected_reference_count
             )
+
+  
             demo.load(
                 fn=load_project_action,
                 inputs=project_dropdown,
@@ -1825,7 +2220,8 @@ with gr.Blocks(
                     chatbot,
                     conversation_history,
                     generation_request,
-                    generated_gallery
+                    generated_gallery,
+                    generated_reference_metadata
                 ]
             )
 
@@ -1834,4 +2230,4 @@ with gr.Blocks(
 # LAUNCH
 # ============================================================
 
-demo.launch(css=CUSTOM_CSS)
+demo.launch(css=CUSTOM_CSS,share=True)
