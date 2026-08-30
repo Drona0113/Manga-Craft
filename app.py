@@ -11,7 +11,9 @@ from database.project_repository import (
     get_projects,
     get_project,
     update_project,
-    delete_project
+    delete_project,
+    remember_last_project,
+    get_last_opened_project
 )
 
 from database.panel_repository import (
@@ -915,16 +917,57 @@ def load_projects():
 
 def get_default_project():
 
+    print("\n========== GET DEFAULT PROJECT ==========")
+
+    # --------------------------------------------------------
+    # Try to restore the last opened project
+    # --------------------------------------------------------
+
+    project = get_last_opened_project()
+
+    if project:
+
+        project_choice = (
+            f"{project['id']} | {project['name']}"
+        )
+
+        print(
+            "✅ RESTORING LAST PROJECT:",
+            project_choice
+        )
+
+        return project_choice
+
+    # --------------------------------------------------------
+    # No previous project
+    # Use first project
+    # --------------------------------------------------------
+
     projects = get_projects()
 
     if not projects:
+
+        print("⚠️ NO PROJECTS FOUND")
+
         return None
 
     project = projects[0]
 
-    return f"{project['id']} | {project['name']}"
+    project_choice = (
+        f"{project['id']} | {project['name']}"
+    )
 
+    print(
+        "⚠️ NO LAST PROJECT — USING:",
+        project_choice
+    )
 
+    # Remember it
+    remember_last_project(
+        project["id"]
+    )
+
+    return project_choice
 
 def create_project_action(project_name):
 
@@ -939,6 +982,9 @@ def create_project_action(project_name):
     project_name = project_name.strip()
 
     project_id = create_project(project_name)
+
+    # Remember newly created project
+    remember_last_project(project_id)
 
     projects = load_projects()
 
@@ -1015,6 +1061,23 @@ def rename_project_action(
         ),
         f"✅ Project renamed to **{new_name.strip()}**."
     )
+
+
+def remember_project_action(project_choice):
+
+    if not project_choice:
+        return
+
+    project_id = int(
+        project_choice.split("|")[0].strip()
+    )
+
+    print("\n========== PROJECT SELECTED ==========")
+    print("PROJECT CHOICE:", project_choice)
+
+    remember_last_project(project_id)
+
+    print("======================================\n")
 
 
 # ============================================================
@@ -1248,6 +1311,25 @@ def save_uploaded_panel(project_id, panel_image):
     print("=================================\n")
 
     return str(destination)
+
+
+def save_uploaded_panel_action(project_choice, panel_image):
+
+    if not project_choice:
+        gr.Warning(
+            "Please select a project before uploading a panel."
+        )
+        return None
+
+    project_id = int(
+        project_choice.split("|")[0].strip()
+    )
+
+    return save_uploaded_panel(
+        project_id,
+        panel_image
+    )
+
 
 # ============================================================
 # MANGACRAFT UI
@@ -1851,6 +1933,8 @@ with gr.Blocks(
                     value=None
                 )
 
+                
+
                 selected_panel_text = gr.Markdown(
                     "**Selected Panel:** None",
                     elem_classes="mc-selected-panel"
@@ -1883,6 +1967,14 @@ with gr.Blocks(
                 outputs=panel_image_text
             )
 
+            panel_image.upload(
+                fn=save_uploaded_panel_action,
+                inputs=[
+                    project_dropdown,
+                    panel_image
+                ],
+                outputs=panel_image
+            )
             use_panel_btn.click(
                 fn=use_panel,
                 inputs=panel_image,
@@ -2185,6 +2277,10 @@ with gr.Blocks(
             # =================================================
 
             project_dropdown.change(
+                fn=remember_project_action,
+                inputs=project_dropdown,
+                outputs=None
+            ).then(
                 fn=load_project_action,
                 inputs=project_dropdown,
                 outputs=[
@@ -2207,9 +2303,13 @@ with gr.Blocks(
                 inputs=None,
                 outputs=selected_reference_count
             )
+            
 
-  
             demo.load(
+                fn=get_default_project,
+                inputs=None,
+                outputs=project_dropdown
+            ).then(
                 fn=load_project_action,
                 inputs=project_dropdown,
                 outputs=[
@@ -2226,8 +2326,9 @@ with gr.Blocks(
             )
 
 
+
 # ============================================================
 # LAUNCH
 # ============================================================
 
-demo.launch(css=CUSTOM_CSS,share=True)
+demo.launch(css=CUSTOM_CSS)

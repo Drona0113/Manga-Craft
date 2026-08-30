@@ -46,13 +46,35 @@ def init_db():
     # --------------------------------------------------------
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_opened INTEGER DEFAULT 0
+    )
+""")
+
+
+    # --------------------------------------------------------
+    # MIGRATE EXISTING DATABASE
+    # --------------------------------------------------------
+
+    columns = [
+        row["name"]
+        for row in cursor.execute(
+            "PRAGMA table_info(projects)"
+        ).fetchall()
+    ]
+
+    if "last_opened" not in columns:
+
+        cursor.execute("""
+            ALTER TABLE projects
+            ADD COLUMN last_opened INTEGER DEFAULT 0
+        """)
+
+        print("✅ Added 'last_opened' column to projects table")
 
     # --------------------------------------------------------
     # PANELS
