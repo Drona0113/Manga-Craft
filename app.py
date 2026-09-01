@@ -66,8 +66,8 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
 
     print("\n========== CHAT RESPONSE ==========")
     print("MESSAGE:", message)
-    print("CHATBOT HISTORY:", history)
-    print("CONVERSATION HISTORY:", conversation_history)
+    #print("CHATBOT HISTORY:", history)
+    #print("CONVERSATION HISTORY:", conversation_history)
     print("PANEL IMAGE:", panel_image)
     print("PROJECT CHOICE : ",project_choice)
     print("SELECTED PANEL:", selected_panel)
@@ -125,7 +125,8 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
         message,
         conversation_history,
         panel_image=panel_image,
-        selected_image=selected_panel
+        selected_image=selected_panel,
+        project_id=project_id
     )
 
     user_content = []
@@ -170,7 +171,7 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
         "✅ Conversation messages saved to SQLite"
     )
     print("\n========== UPDATED CONVERSATION HISTORY ==========")
-    print(updated_history)
+    #print(updated_history)
     print("==================================================\n")
 
 
