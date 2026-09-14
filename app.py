@@ -23,6 +23,7 @@ from database.panel_repository import (
 from database.conversation_repository import (
     create_conversation,
     get_conversation,
+    get_conversations,
     save_message,
     get_messages,
     touch_conversation
@@ -44,6 +45,9 @@ def get_or_create_project_conversation(project_id):
 
     return create_conversation(project_id)
 
+
+MAX_CONVERSATION_TURNS = 25
+
 from pathlib import Path
 import shutil
 
@@ -62,19 +66,41 @@ from database.panel_repository import (
     delete_panel
 )
 
-def chat_response(message, history, panel_image, selected_panel, conversation_history,project_choice):
+
+
+def load_conversation_choices(project_id):
+
+    conversations = get_conversations(project_id)
+
+    return [
+        (
+            f"Conversation {conversation['id']}",
+            conversation["id"]
+        )
+        for conversation in conversations
+    ]
+
+
+
+def chat_response(message, history, panel_image, selected_panel, conversation_history,project_choice,current_conversation_id,request:gr.Request):
 
     print("\n========== CHAT RESPONSE ==========")
     print("MESSAGE:", message)
-    #print("CHATBOT HISTORY:", history)
-    #print("CONVERSATION HISTORY:", conversation_history)
+    # print("CHATBOT HISTORY:", history)
+    
     print("PANEL IMAGE:", panel_image)
     print("PROJECT CHOICE : ",project_choice)
     print("SELECTED PANEL:", selected_panel)
     print("===================================\n")
 
+    session_id = request.session_hash
+
+    print("SESSION ID:", session_id)
+
     history = history or []
     conversation_history = conversation_history or []
+
+    print("CONVERSATION HISTORY:", conversation_history)
     #GET CURRENT PROJECT
     if not project_choice:
 
@@ -95,53 +121,99 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
     print(" CURRENT PROJECT ID:", project_id)
 
     # --------------------------------------------------------
-    # Get / create project conversation
+    # Get active conversation
     # --------------------------------------------------------
 
-    conversation = get_conversation(project_id)
+    conversation_id = current_conversation_id
 
-    if conversation:
+    if not conversation_id:
 
-        conversation_id = conversation["id"]
-
-    else:
-
-        conversation_id = create_conversation(
+        conversation_id = get_or_create_project_conversation(
             project_id
         )
 
-    print(
-        "CONVERSATION ID:",
-        conversation_id
-    )
-
-
-    conversation_id = get_or_create_project_conversation(
-        project_id
-    )
-
-    print("CONVERSATION ID:", conversation_id)
-    response,new_generation_request= craft_response(
-        message,
-        conversation_history,
-        panel_image=panel_image,
-        selected_image=selected_panel,
-        project_id=project_id
-    )
-
-    user_content = []
-
-    if selected_panel:
-        user_content.append(
-            {"path": selected_panel}
+        print(
+            "✅ INITIAL CONVERSATION:",
+            conversation_id
         )
 
-    user_content.append(message)
+    else:
+
+        print(
+            "✅ ACTIVE CONVERSATION:",
+            conversation_id
+        )
+
+
+    # --------------------------------------------------------
+    # CONVERSATION TURN LIMIT
+    # --------------------------------------------------------
+
+    current_turns = len(conversation_history) // 2
+
+    print(
+        "CURRENT TURNS:",
+        current_turns,
+        "/",
+        MAX_CONVERSATION_TURNS
+    )
+
+    if current_turns >= MAX_CONVERSATION_TURNS:
+
+        gr.Warning(
+            "This conversation has reached its 25-turn limit. "
+            "Please start a New Chat to continue.",
+            duration=7
+        )
+
+        print(
+            "🚫 CONVERSATION LIMIT REACHED:",
+            conversation_id
+        )
+
+        return (
+            history,
+            conversation_history,
+            None,
+            True
+        )
+
+    # --------------------------------------------------------
+    # Generate response
+    # --------------------------------------------------------
+
+    try:
+
+        response, new_generation_request = craft_response(
+            message,
+            conversation_history,
+            panel_image=panel_image,
+            selected_image=selected_panel,
+            project_id=project_id,
+            session_id=session_id
+        )
+
+    except RuntimeError as e:
+
+        if str(e).startswith("Rate limit reached"):
+
+            gr.Warning(
+                str(e),
+                duration=7
+            )
+
+            return (
+                history,
+                conversation_history,
+                None
+            )
+
+        raise
 
     updated_history = conversation_history + [
         {
             "role": "user",
-            "content": user_content
+            "content": message
         },
         {
             "role": "assistant",
@@ -184,8 +256,73 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
             duration=7
         )
 
-    return updated_history, updated_history, new_generation_request
+    conversation_locked = (len(updated_history) // 2 >= MAX_CONVERSATION_TURNS)
 
+    return (
+        updated_history,
+        updated_history,
+        new_generation_request,
+        conversation_locked
+    )
+
+
+
+def conversation_limit_reached(conversation_history):
+    conversation_history = conversation_history or []
+
+    current_turns = len(conversation_history) // 2
+
+    return current_turns >= MAX_CONVERSATION_TURNS
+
+
+
+def new_chat_action(project_choice):
+
+    print("\n========== NEW CHAT ==========")
+    print("PROJECT:", project_choice)
+
+    if not project_choice:
+        gr.Warning("Please select a project first.")
+        return (
+            None,
+            [],
+            [],
+            None,
+            gr.update(),
+            False
+        )
+
+    project_id = int(
+        project_choice.split("|")[0].strip()
+    )
+
+    conversation_id = create_conversation(project_id)
+
+    print(
+        "✅ NEW CONVERSATION CREATED:",
+        conversation_id
+    )
+
+    conversation_choices = load_conversation_choices(
+        project_id
+    )
+
+    gr.Info(
+        "✨ New conversation started.",
+        duration=3
+    )
+
+    return (
+        conversation_id,                       # current_conversation_id
+        [],                                    # chatbot
+        [],                                    # conversation_history
+        None,                                  # generation_request
+        gr.update(
+            choices=conversation_choices,
+            value=conversation_id
+        ),
+        False
+    )
 
 
 def analyze_panel_action(panel_image, history):
@@ -868,10 +1005,25 @@ def generate_reference_action(
 
     result = generate_reference(
         selected_panel,
-        generation_request
+        generation_request,
+        project_id
     )
 
     print("Generated:", result)
+
+# --------------------------------------------------------
+# Handle generation failure
+# --------------------------------------------------------
+
+    if not result:
+
+        gr.Warning(
+            "Reference generation failed. "
+            "Please check the terminal for the error details."
+        )
+
+        return []
+
 
     # --------------------------------------------------------
     # Save generated reference
@@ -885,7 +1037,7 @@ def generate_reference_action(
 
     print("REFERENCE ID:", reference_id)
 
-    return result
+    return [result]
 
 
 # ============================================================
@@ -1105,7 +1257,9 @@ def load_project_action(project_choice):
             [],                    # conversation_history
             None,                   # generation_request
             [],
-            []
+            [],
+            [],
+            None
         )
 
     # --------------------------------------------------------
@@ -1131,7 +1285,9 @@ def load_project_action(project_choice):
             [],
             None,
             [],
-            []
+            [],
+            [],
+            None
         )
 
     print("PROJECT ID:", project["id"])
@@ -1159,17 +1315,11 @@ def load_project_action(project_choice):
     # LOAD / CREATE CONVERSATION
     # ========================================================
 
-    conversation = get_conversation(project_id)
-
-    if conversation:
-
-        conversation_id = conversation["id"]
-
-    else:
-
-        conversation_id = create_conversation(project_id)
+    conversation_id = get_or_create_project_conversation(project_id)
 
     print("CONVERSATION ID:", conversation_id)
+
+    conversation_choices = load_conversation_choices(project_id)
 
     # ========================================================
     # LOAD MESSAGES
@@ -1258,9 +1408,64 @@ def load_project_action(project_choice):
         history,
         None,
         generated_references,
-        generated_reference_metadata
+        generated_reference_metadata,
+        gr.update(
+            choices=conversation_choices,
+            value= conversation_id
+        ),
+        conversation_id
     )
 
+
+def update_chat_controls(is_locked):
+    return (
+        gr.update(interactive=not is_locked),
+        gr.update(interactive=not is_locked)
+    )
+
+
+def load_conversation_action(
+    conversation_id,
+    project_choice
+):
+
+    print("\n========== CONVERSATION SELECTED ==========")
+    print("CONVERSATION ID:", conversation_id)
+    print("PROJECT:", project_choice)
+
+    if not conversation_id or not project_choice:
+        return [], [], None, False
+
+    conversation_id = int(conversation_id)
+
+    messages = get_messages(conversation_id)
+
+    print("MESSAGES:", len(messages))
+
+    history = []
+
+    for msg in messages:
+
+        history.append(
+            {
+                "role": msg["role"],
+                "content": msg["content"]
+            }
+        )
+
+    is_locked = (
+        len(history) // 2
+        >= MAX_CONVERSATION_TURNS
+    )
+
+    print("CONVERSATION LOCKED:", is_locked)
+
+    return (
+        history,
+        history,
+        conversation_id,
+        is_locked
+    )
 
 
 from database.database import init_db
@@ -1757,7 +1962,7 @@ button {
 
 
 with gr.Blocks(
-    title="MangaCraft",
+    title="MangaCraft"
 ) as demo:
 
     # ========================================================
@@ -1930,9 +2135,16 @@ with gr.Blocks(
                     value=[]
                 )
 
+                current_conversation_id = gr.State(
+                    value=None
+                )
+
                 current_project_id = gr.State(
                     value=None
                 )
+
+
+                conversation_locked = gr.State(False)
 
                 
 
@@ -2005,6 +2217,8 @@ with gr.Blocks(
                 </div>
                 """
             )
+
+           
 
             with gr.Row(
                 elem_classes="mc-tool-row"
@@ -2104,6 +2318,22 @@ with gr.Blocks(
                 """
             )
 
+            new_chat_btn = gr.Button(
+                "＋ New Chat",
+                elem_classes="mc-secondary-btn"
+            )
+
+
+            conversation_dropdown = gr.Dropdown(
+                label="Conversation",
+                choices=[],
+                value=None,
+                type="value",
+                interactive=True,
+                elem_classes="mc-conversation-list"
+            )
+
+
             chatbot = gr.Chatbot(
                 label="Conversation",
                 height=650,
@@ -2122,14 +2352,23 @@ with gr.Blocks(
                     placeholder="Ask MangaCraft...",
                     label="",
                     scale=5,
-                    lines=2
+                    lines=1
+                    
                 )
 
                 send_btn = gr.Button(
                     "➤",
                     scale=1,
                     min_width=55,
-                    variant="primary"
+                    variant="primary",
+                    
+                )
+
+                stop_btn = gr.Button(
+                    "⏹",
+                    scale=1,
+                    min_width=55,
+                    variant="stop"
                 )
 
             # =================================================
@@ -2144,14 +2383,33 @@ with gr.Blocks(
                     panel_image,
                     selected_panel,
                     conversation_history,
-                    project_dropdown
+                    project_dropdown,
+                    current_conversation_id
                 ],
                 outputs=[
                     chatbot,
                     conversation_history,
-                    generation_request
+                    generation_request,
+                    conversation_locked
+                ],
+                concurrency_id="chat_generation"
+            )
+
+
+            send_event.then(
+                fn=lambda: "",
+                inputs=None,
+                outputs=message
+            ).then(
+                fn=update_chat_controls,
+                inputs=conversation_locked,
+                outputs=[
+                    message,
+                    send_btn
                 ]
             )
+
+
 
             enter_event = message.submit(
                 fn=chat_response,
@@ -2161,25 +2419,63 @@ with gr.Blocks(
                     panel_image,
                     selected_panel,
                     conversation_history,
-                    project_dropdown
+                    project_dropdown,
+                    current_conversation_id
                 ],
                 outputs=[
                     chatbot,
                     conversation_history,
-                    generation_request
-                ]
-            )
-
-            send_event.then(
-                fn=lambda: "",
-                inputs=None,
-                outputs=message
+                    generation_request,
+                    conversation_locked
+                ],
+                concurrency_id="chat_generation"
             )
 
             enter_event.then(
                 fn=lambda: "",
                 inputs=None,
                 outputs=message
+            ).then(
+                fn=update_chat_controls,
+                inputs=conversation_locked,
+                outputs=[
+                    message,
+                    send_btn
+                ]
+            )
+
+
+            stop_event = stop_btn.click(
+                fn=None,
+                inputs=None,
+                outputs=None,
+                cancels=[
+                    send_event,
+                    enter_event
+                ]
+            )
+
+
+            new_chat_btn.click(
+                fn=new_chat_action,
+                inputs=[
+                    project_dropdown
+                ],
+                outputs=[
+                    current_conversation_id,
+                    chatbot,
+                    conversation_history,
+                    generation_request,
+                    conversation_dropdown,
+                    conversation_locked
+                ]
+            ).then(
+                fn=update_chat_controls,
+                inputs=conversation_locked,
+                outputs=[
+                    message,
+                    send_btn
+                ]
             )
 
             # =================================================
@@ -2209,7 +2505,7 @@ with gr.Blocks(
             # =================================================
 
             generate_btn.click(
-                fn=test_generate_reference_action,
+                fn=generate_reference_action,
                 inputs=[
                     project_dropdown,
                     selected_panel,
@@ -2293,7 +2589,9 @@ with gr.Blocks(
                     conversation_history,
                     generation_request,
                     generated_gallery,
-                    generated_reference_metadata
+                    generated_reference_metadata,
+                    conversation_dropdown,
+                    current_conversation_id
                 ]
             ).then(
                 fn=lambda: [],
@@ -2303,6 +2601,28 @@ with gr.Blocks(
                 fn=lambda: "0 selected",
                 inputs=None,
                 outputs=selected_reference_count
+            )
+
+
+            conversation_dropdown.change(
+                fn=load_conversation_action,
+                inputs=[
+                    conversation_dropdown,
+                    project_dropdown
+                ],
+                outputs=[
+                    chatbot,
+                    conversation_history,
+                    current_conversation_id,
+                    conversation_locked
+                ]
+            ).then(
+                fn=update_chat_controls,
+                inputs=conversation_locked,
+                outputs=[
+                    message,
+                    send_btn
+                ]
             )
             
 
@@ -2322,7 +2642,9 @@ with gr.Blocks(
                     conversation_history,
                     generation_request,
                     generated_gallery,
-                    generated_reference_metadata
+                    generated_reference_metadata,
+                    conversation_dropdown,
+                    current_conversation_id
                 ]
             )
 

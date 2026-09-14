@@ -187,7 +187,7 @@ def search_project_memory(
     Search project memories using SQLite text matching.
 
     Each meaningful word in the query is searched independently.
-    Results matching more query terms are returned first.
+    Results are ranked by the number of matching query terms.
     """
 
     conn = get_connection()
@@ -203,16 +203,55 @@ def search_project_memory(
         conn.close()
         return []
 
-    conditions = []
-    parameters = [project_id]
+    # --------------------------------------------------------
+    # WHERE CONDITIONS
+    # --------------------------------------------------------
+
+    where_conditions = []
 
     for word in words:
-        conditions.append(
+        where_conditions.append(
             "LOWER(content) LIKE ?"
         )
-        parameters.append(f"%{word}%")
 
-    where_clause = " OR ".join(conditions)
+    where_clause = " OR ".join(where_conditions)
+
+    # --------------------------------------------------------
+    # RELEVANCE SCORE
+    # --------------------------------------------------------
+
+    score_parts = []
+
+    for word in words:
+        score_parts.append(
+            "CASE WHEN LOWER(content) LIKE ? THEN 1 ELSE 0 END"
+        )
+
+    score_expression = " + ".join(score_parts)
+
+    # --------------------------------------------------------
+    # PARAMETERS
+    # --------------------------------------------------------
+
+    where_parameters = [
+        f"%{word}%"
+        for word in words
+    ]
+
+    score_parameters = [
+        f"%{word}%"
+        for word in words
+    ]
+
+    parameters = (
+        score_parameters
+        + [project_id]
+        + where_parameters
+    )
+
+    # --------------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------------
 
     cursor.execute(
         f"""
@@ -223,11 +262,14 @@ def search_project_memory(
             content,
             asset_id,
             created_at,
-            updated_at
+            updated_at,
+            ({score_expression}) AS match_score
         FROM project_memory
         WHERE project_id = ?
           AND ({where_clause})
-        ORDER BY updated_at DESC
+        ORDER BY
+            match_score DESC,
+            updated_at DESC
         """,
         parameters
     )
@@ -237,9 +279,6 @@ def search_project_memory(
     conn.close()
 
     return memories
-
-
-
 
 # ============================================================
 # GET PROJECT CONTEXT

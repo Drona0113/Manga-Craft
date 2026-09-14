@@ -29,10 +29,117 @@ import json
 from utils.image_utils import encode_image
 
 
+
+
+import time
+from collections import defaultdict, deque
+
+
+# ========================================================
+# V2 RATE LIMITING
+# ========================================================
+
+RATE_LIMIT_CALLS = 10
+RATE_LIMIT_WINDOW = 60
+
+_llm_call_history = defaultdict(deque)
+
+
+def check_rate_limit(session_id):
+    now = time.time()
+
+    calls = _llm_call_history[session_id]
+
+    # Remove calls older than the current window
+    while calls and now - calls[0] >= RATE_LIMIT_WINDOW:
+        calls.popleft()
+
+    if len(calls) >= RATE_LIMIT_CALLS:
+
+        remaining = int(
+            RATE_LIMIT_WINDOW - (now - calls[0])
+        )
+
+        return False, remaining
+
+    calls.append(now)
+
+    return True, 0
+
+
+
+def openrouter_chat_completion(
+    session_id,
+    **kwargs
+):
+
+    allowed, retry_after = check_rate_limit(
+        session_id
+    )
+
+    if not allowed:
+
+        print(
+            "\n========== RATE LIMIT =========="
+        )
+
+        print(
+            "SESSION:",
+            session_id
+        )
+
+        print(
+            "STATUS: BLOCKED"
+        )
+
+        print(
+            "RETRY AFTER:",
+            retry_after,
+            "seconds"
+        )
+
+        print(
+            "================================\n"
+        )
+
+        raise RuntimeError(
+            f"Rate limit reached. "
+            f"Please wait about {retry_after} seconds "
+            f"before trying again."
+        )
+
+    print(
+        "\n========== LLM API CALL =========="
+    )
+
+    print(
+        "SESSION:",
+        session_id
+    )
+
+    print(
+        "CALL COUNT:",
+        len(_llm_call_history[session_id]),
+        "/",
+        RATE_LIMIT_CALLS
+    )
+
+    print(
+        "===================================\n"
+    )
+
+    return openrouter.chat.completions.create(
+        **kwargs
+    )
+
+
+
 openrouter = OpenAI(
     api_key=config.OPENROUTER_API_KEY,
     base_url=config.OPENROUTER_URL
 )
+
+
 
 
 # ============================================================
@@ -61,6 +168,69 @@ ALL_TOOLS = [
     SEARCH_PROJECT_TOOL,
     GET_PROJECT_CONTEXT_TOOL,
 ]
+
+
+# ============================================================
+# REFERENCE GENERATION DECISION
+# ============================================================
+
+REFERENCE_DECISION_PROMPT = """
+You are deciding whether a user's request to generate a manga
+reference image contains enough information to proceed.
+
+Return ONLY a JSON object with exactly these fields:
+
+{
+    "decision": "clarify" or "generate",
+    "question": "..."
+}
+
+Use "clarify" when the user's request is too vague to determine
+what the user wants from the generated reference.
+
+Use "generate" when the user has provided sufficient direction
+about what they want to preserve, change, simplify, or emphasize.
+
+Do not invent missing requirements.
+
+For a clarification response:
+- ask one concise question
+- ask what the user wants to preserve, change, simplify,
+  or emphasize
+- do not ask for an image path
+- do not ask for an image URL
+
+Example:
+
+User:
+"Generate a reference image from this panel."
+
+Response:
+{
+    "decision": "clarify",
+    "question": "What would you like me to preserve or change from the selected panel?"
+}
+
+Example:
+
+User:
+"Generate a clean line-art reference from this panel while
+keeping the same characters and poses."
+
+Response:
+{
+    "decision": "generate",
+    "question": ""
+}
+
+Base the decision on the user's actual request.
+
+Do not use keyword matching.
+
+Do not invent characters, poses, jersey numbers, costumes,
+composition, perspective, camera angle, background, lighting,
+style, or modifications that the user did not request.
+"""
 
 
 # ============================================================
@@ -112,6 +282,7 @@ def requires_reference_generation(message):
 
     generation_phrases = [
         "generate reference",
+        "generate the reference",
         "generate a reference",
         "create reference",
         "create a reference",
@@ -130,57 +301,76 @@ def requires_reference_generation(message):
     )
 
 
-
 # ============================================================
 # SELECT TOOLS FOR CURRENT REQUEST
 # ============================================================
 
+# def get_tools_for_request(message):
+
+#     # ========================================================
+#     # REFERENCE GENERATION
+#     # ========================================================
+
+#     if requires_reference_generation(message):
+
+#         print("🎨 REQUEST TYPE: REFERENCE GENERATION")
+
+#         return [
+#             GENERATE_REFERENCE_TOOL
+#         ]
+
+#     # ========================================================
+#     # VISUAL ANALYSIS
+#     # ========================================================
+
+#     if requires_visual_context(message):
+
+#         print("👁️ REQUEST TYPE: VISUAL ANALYSIS")
+
+#         return [
+#             ANALYZE_PANEL_TOOL,
+#             COMPOSITION_TOOL
+#         ]
+
+#     # ========================================================
+#     # PROJECT INTELLIGENCE
+#     # ========================================================
+
+#     print("🧠 PROJECT MEMORY TOOLS ENABLED")
+#     return [
+#             SAVE_PROJECT_MEMORY_TOOL,
+#             GET_PROJECT_MEMORY_TOOL,
+#             SEARCH_PROJECT_TOOL,
+#             GET_PROJECT_CONTEXT_TOOL
+#         ]
+
+#     # ========================================================
+#     # NORMAL CONVERSATION
+#     # ========================================================
+
+#     print("💬 REQUEST TYPE: NORMAL CONVERSATION")
+
+#     return []
+
+
+
 def get_tools_for_request(message):
-
-    # ========================================================
-    # REFERENCE GENERATION
-    # ========================================================
-
     if requires_reference_generation(message):
-
         print("🎨 REQUEST TYPE: REFERENCE GENERATION")
-
-        return [
-            GENERATE_REFERENCE_TOOL
-        ]
-
-    # ========================================================
-    # VISUAL ANALYSIS
-    # ========================================================
+        return [GENERATE_REFERENCE_TOOL]
 
     if requires_visual_context(message):
-
         print("👁️ REQUEST TYPE: VISUAL ANALYSIS")
+        return [ANALYZE_PANEL_TOOL, COMPOSITION_TOOL]
 
-        return [
-            ANALYZE_PANEL_TOOL,
-            COMPOSITION_TOOL
-        ]
-
-    # ========================================================
-    # PROJECT INTELLIGENCE
-    # ========================================================
-
-    print("🧠 PROJECT MEMORY TOOLS ENABLED")
+    print("🧠 GENERAL REQUEST: PROJECT MEMORY TOOLS AVAILABLE")
     return [
-            SAVE_PROJECT_MEMORY_TOOL,
-            GET_PROJECT_MEMORY_TOOL,
-            SEARCH_PROJECT_TOOL,
-            GET_PROJECT_CONTEXT_TOOL
-        ]
+        SAVE_PROJECT_MEMORY_TOOL,
+        GET_PROJECT_MEMORY_TOOL,
+        SEARCH_PROJECT_TOOL,
+        GET_PROJECT_CONTEXT_TOOL,
+    ]
 
-    # ========================================================
-    # NORMAL CONVERSATION
-    # ========================================================
-
-    print("💬 REQUEST TYPE: NORMAL CONVERSATION")
-
-    return []
 
 
 
@@ -468,6 +658,85 @@ def assistant_tool_message(assistant_message):
 print("🚨 NEW LLM.PY VERSION RUNNING")
 
 
+
+# ============================================================
+# DECIDE WHETHER REFERENCE REQUEST NEEDS CLARIFICATION
+# ============================================================
+
+def decide_reference_request(message,session_id):
+
+    response = openrouter_chat_completion(
+        session_id=session_id,
+        model=config.MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": REFERENCE_DECISION_PROMPT
+            },
+            {
+                "role": "user",
+                "content": message
+            }
+        ],
+        max_completion_tokens=150
+    )
+
+    content = response.choices[0].message.content
+
+    print(
+        "\n========== REFERENCE DECISION =========="
+    )
+
+    print(
+        "LLM RESPONSE:",
+        content
+    )
+
+    print(
+        "========================================\n"
+    )
+
+    try:
+
+        # Remove Markdown code fences if the model
+        # wrapped the JSON response in ```json ... ```
+
+        cleaned_content = content.strip()
+
+        if cleaned_content.startswith("```"):
+            cleaned_content = cleaned_content.replace(
+                "```json", "", 1
+            ).replace(
+                "```", "", 1
+            ).strip()
+
+        decision = json.loads(
+            cleaned_content
+        )
+
+        return (
+            decision.get("decision"),
+            decision.get("question", "")
+        )
+
+    except (json.JSONDecodeError, TypeError):
+
+        print(
+            "⚠️ Could not parse reference decision."
+        )
+
+        # Safe fallback:
+        # If we cannot determine whether the request
+        # is safe to generate, ask for clarification
+        # instead of spending image-generation credits.
+
+        return (
+            "clarify",
+            "What would you like me to preserve or change "
+            "from the selected panel?"
+        )
+
+
 # ============================================================
 # MAIN CHAT FUNCTION
 # ============================================================
@@ -477,7 +746,8 @@ def craft_response(
     history,
     panel_image,
     selected_image,
-    project_id
+    project_id,
+    session_id
 ):
 
     generation_request = None
@@ -540,6 +810,34 @@ def craft_response(
             None
         )
 
+
+    # ========================================================
+# REFERENCE GENERATION DECISION
+# ========================================================
+
+    if needs_reference_generation:
+
+        decision, clarification = (
+            decide_reference_request(message,session_id)
+        )
+
+        print(
+            "REFERENCE DECISION:",
+            decision
+        )
+
+        if decision == "clarify":
+
+            print(
+                "❓ REFERENCE REQUEST NEEDS CLARIFICATION"
+            )
+
+            return (
+                clarification,
+                None
+            )
+
+
     # ========================================================
     # SELECT TOOLS
     # ========================================================
@@ -563,6 +861,7 @@ def craft_response(
     # ========================================================
 
     history = clean_history(history)
+
 
     relevant_system_prompt = SYSTEM_PROMPT
 
@@ -636,31 +935,24 @@ def craft_response(
     # FIRST LLM CALL
     # ========================================================
 
+    # print("\n========== SYSTEM PROMPT CHECK ==========")
+    # print(relevant_system_prompt)
+    # print("=========================================\n")
+
     request_kwargs = {
         "model": config.MODEL,
         "messages": messages,
-        "max_completion_tokens": 2000
+        "max_completion_tokens": 300
     }
 
     # --------------------------------------------------------
-    # CRITICAL ARCHITECTURE:
-    #
-    # Do NOT send tools for normal conversation.
+    # Project-memory tools are available for general requests.
+    # The LLM decides whether a tool is actually needed.
     # --------------------------------------------------------
 
     if request_tools:
-
         request_kwargs["tools"] = request_tools
-
-        if (
-            request_tools == [
-                SAVE_PROJECT_MEMORY_TOOL,
-                GET_PROJECT_MEMORY_TOOL,
-                SEARCH_PROJECT_TOOL,
-                GET_PROJECT_CONTEXT_TOOL
-            ]
-        ):
-            request_kwargs["tool_choice"] = "required"
+        request_kwargs["tool_choice"] = "auto"
 
 
     print("\n========== REQUEST SENT TO LLM ==========")
@@ -676,8 +968,9 @@ def craft_response(
 
     print("=========================================\n")
     
-    response = openrouter.chat.completions.create(
-        **request_kwargs
+    response = openrouter_chat_completion(
+    session_id=session_id,
+    **request_kwargs
     )
 
 
@@ -841,10 +1134,11 @@ def craft_response(
         # SYNTHESIS CALL
         # ----------------------------------------------------
 
-        response = openrouter.chat.completions.create(
+        response = openrouter_chat_completion(
+            session_id=session_id,
             model=config.MODEL,
             messages=messages,
-            max_completion_tokens=2000
+            max_completion_tokens=1200
         )
 
         print(
@@ -889,3 +1183,5 @@ def craft_response(
         final_message.content,
         generation_request
     )
+
+

@@ -75,3 +75,37 @@ print("\nGENERATED REFERENCES:")
 
 for reference in context["generated_references"]:
     print(dict(reference))
+
+
+
+
+# ============================================================
+# SEARCH RELEVANCE TEST
+# ============================================================
+
+print("\n===== SEARCH RELEVANCE TEST =====")
+
+project_id = 3
+
+queries = [
+    "Kageyama black jacket",
+    "Kageyama wears black jacket",
+    "black jacket Kageyama",
+    "Kageyama"
+]
+
+for query in queries:
+
+    print(f"\nQuery: {query}")
+
+    results = search_project_memory(
+        project_id,
+        query
+    )
+
+    for memory in results:
+        print(
+            f"ID={memory['id']} | "
+            f"Score={memory['match_score']} | "
+            f"{memory['content']}"
+        )

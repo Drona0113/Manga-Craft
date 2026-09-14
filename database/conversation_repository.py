@@ -54,6 +54,33 @@ def get_conversation(project_id):
     return conversation
 
 
+
+# ============================================================
+# GET ALL PROJECT CONVERSATIONS
+# ============================================================
+
+def get_conversations(project_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, project_id, created_at, updated_at
+        FROM conversations
+        WHERE project_id = ?
+        ORDER BY updated_at DESC
+        """,
+        (project_id,)
+    )
+
+    conversations = cursor.fetchall()
+
+    conn.close()
+
+    return conversations
+
+
 # ============================================================
 # UPDATE CONVERSATION TIMESTAMP
 # ============================================================

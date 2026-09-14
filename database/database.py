@@ -52,9 +52,24 @@ def init_db():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_opened INTEGER DEFAULT 0
-    )
-""")
+        )
+    """)
 
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS project_memory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            memory_type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            asset_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id)
+                REFERENCES projects(id)
+                ON DELETE CASCADE
+        )
+    """)
 
     # --------------------------------------------------------
     # MIGRATE EXISTING DATABASE
