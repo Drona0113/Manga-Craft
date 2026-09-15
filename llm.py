@@ -125,6 +125,11 @@ def openrouter_chat_completion(
     )
 
     print(
+        "STREAM:",
+        kwargs.get("stream", False)
+    )
+
+    print(
         "===================================\n"
     )
 
@@ -132,6 +137,97 @@ def openrouter_chat_completion(
         **kwargs
     )
 
+
+def stream_openrouter_chat_completion(
+    session_id,
+    **kwargs
+):
+
+    kwargs["stream"] = True
+
+    return openrouter_chat_completion(
+        session_id=session_id,
+        **kwargs
+    )
+
+
+
+def stream_final_response(
+    session_id,
+    **kwargs
+):
+    """
+    Stream the final user-facing LLM response.
+
+    Yields:
+        str: Incremental text chunks.
+    """
+
+    full_response = ""
+
+    try:
+        stream = stream_openrouter_chat_completion(
+            session_id=session_id,
+            **kwargs
+        )
+
+        for chunk in stream:
+
+            if not chunk.choices:
+                continue
+
+            delta = chunk.choices[0].delta
+
+            content = delta.content
+
+            if content:
+
+                full_response += content
+
+                yield content
+
+        print(
+            "\n========== STREAM COMPLETE =========="
+        )
+
+        print(
+            "FINAL RESPONSE LENGTH:",
+            len(full_response)
+        )
+
+        print(
+            "CONTENT:",
+            full_response
+        )
+
+        print(
+            "====================================\n"
+        )
+
+    except Exception as e:
+
+        print(
+            "\n========== STREAMING ERROR =========="
+        )
+
+        print(
+            "ERROR TYPE:",
+            type(e).__name__
+        )
+
+        print(
+            "ERROR:",
+            str(e)
+        )
+
+        print(
+            "====================================\n"
+        )
+
+        yield (
+            "⚠️ The AI service could not complete the response. "
+            "Please try again later."
+        )
 
 
 openrouter = OpenAI(
@@ -170,68 +266,6 @@ ALL_TOOLS = [
 ]
 
 
-# ============================================================
-# REFERENCE GENERATION DECISION
-# ============================================================
-
-REFERENCE_DECISION_PROMPT = """
-You are deciding whether a user's request to generate a manga
-reference image contains enough information to proceed.
-
-Return ONLY a JSON object with exactly these fields:
-
-{
-    "decision": "clarify" or "generate",
-    "question": "..."
-}
-
-Use "clarify" when the user's request is too vague to determine
-what the user wants from the generated reference.
-
-Use "generate" when the user has provided sufficient direction
-about what they want to preserve, change, simplify, or emphasize.
-
-Do not invent missing requirements.
-
-For a clarification response:
-- ask one concise question
-- ask what the user wants to preserve, change, simplify,
-  or emphasize
-- do not ask for an image path
-- do not ask for an image URL
-
-Example:
-
-User:
-"Generate a reference image from this panel."
-
-Response:
-{
-    "decision": "clarify",
-    "question": "What would you like me to preserve or change from the selected panel?"
-}
-
-Example:
-
-User:
-"Generate a clean line-art reference from this panel while
-keeping the same characters and poses."
-
-Response:
-{
-    "decision": "generate",
-    "question": ""
-}
-
-Base the decision on the user's actual request.
-
-Do not use keyword matching.
-
-Do not invent characters, poses, jersey numbers, costumes,
-composition, perspective, camera angle, background, lighting,
-style, or modifications that the user did not request.
-"""
-
 
 # ============================================================
 # DETERMINE USER INTENT
@@ -248,6 +282,10 @@ def requires_visual_context(message):
         "this image",
         "that image",
         "the image",
+        "selected panel",
+        "selected image",
+        "uploaded panel",
+        "uploaded image",
         "what is happening",
         "what do you see",
         "analyze",
@@ -276,101 +314,14 @@ def requires_visual_context(message):
     )
 
 
-def requires_reference_generation(message):
-
-    text = message.lower().strip()
-
-    generation_phrases = [
-        "generate reference",
-        "generate the reference",
-        "generate a reference",
-        "create reference",
-        "create a reference",
-        "make a reference",
-        "generate image",
-        "generate an image",
-        "create image",
-        "create an image",
-        "make an image",
-        "reference image"
-    ]
-
-    return any(
-        phrase in text
-        for phrase in generation_phrases
-    )
-
-
-# ============================================================
-# SELECT TOOLS FOR CURRENT REQUEST
-# ============================================================
-
-# def get_tools_for_request(message):
-
-#     # ========================================================
-#     # REFERENCE GENERATION
-#     # ========================================================
-
-#     if requires_reference_generation(message):
-
-#         print("🎨 REQUEST TYPE: REFERENCE GENERATION")
-
-#         return [
-#             GENERATE_REFERENCE_TOOL
-#         ]
-
-#     # ========================================================
-#     # VISUAL ANALYSIS
-#     # ========================================================
-
-#     if requires_visual_context(message):
-
-#         print("👁️ REQUEST TYPE: VISUAL ANALYSIS")
-
-#         return [
-#             ANALYZE_PANEL_TOOL,
-#             COMPOSITION_TOOL
-#         ]
-
-#     # ========================================================
-#     # PROJECT INTELLIGENCE
-#     # ========================================================
-
-#     print("🧠 PROJECT MEMORY TOOLS ENABLED")
-#     return [
-#             SAVE_PROJECT_MEMORY_TOOL,
-#             GET_PROJECT_MEMORY_TOOL,
-#             SEARCH_PROJECT_TOOL,
-#             GET_PROJECT_CONTEXT_TOOL
-#         ]
-
-#     # ========================================================
-#     # NORMAL CONVERSATION
-#     # ========================================================
-
-#     print("💬 REQUEST TYPE: NORMAL CONVERSATION")
-
-#     return []
 
 
 
 def get_tools_for_request(message):
-    if requires_reference_generation(message):
-        print("🎨 REQUEST TYPE: REFERENCE GENERATION")
-        return [GENERATE_REFERENCE_TOOL]
 
-    if requires_visual_context(message):
-        print("👁️ REQUEST TYPE: VISUAL ANALYSIS")
-        return [ANALYZE_PANEL_TOOL, COMPOSITION_TOOL]
+    print("🧠 ALL V2 TOOLS AVAILABLE TO LLM")
 
-    print("🧠 GENERAL REQUEST: PROJECT MEMORY TOOLS AVAILABLE")
-    return [
-        SAVE_PROJECT_MEMORY_TOOL,
-        GET_PROJECT_MEMORY_TOOL,
-        SEARCH_PROJECT_TOOL,
-        GET_PROJECT_CONTEXT_TOOL,
-    ]
-
+    return ALL_TOOLS
 
 
 
@@ -660,84 +611,6 @@ print("🚨 NEW LLM.PY VERSION RUNNING")
 
 
 # ============================================================
-# DECIDE WHETHER REFERENCE REQUEST NEEDS CLARIFICATION
-# ============================================================
-
-def decide_reference_request(message,session_id):
-
-    response = openrouter_chat_completion(
-        session_id=session_id,
-        model=config.MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": REFERENCE_DECISION_PROMPT
-            },
-            {
-                "role": "user",
-                "content": message
-            }
-        ],
-        max_completion_tokens=150
-    )
-
-    content = response.choices[0].message.content
-
-    print(
-        "\n========== REFERENCE DECISION =========="
-    )
-
-    print(
-        "LLM RESPONSE:",
-        content
-    )
-
-    print(
-        "========================================\n"
-    )
-
-    try:
-
-        # Remove Markdown code fences if the model
-        # wrapped the JSON response in ```json ... ```
-
-        cleaned_content = content.strip()
-
-        if cleaned_content.startswith("```"):
-            cleaned_content = cleaned_content.replace(
-                "```json", "", 1
-            ).replace(
-                "```", "", 1
-            ).strip()
-
-        decision = json.loads(
-            cleaned_content
-        )
-
-        return (
-            decision.get("decision"),
-            decision.get("question", "")
-        )
-
-    except (json.JSONDecodeError, TypeError):
-
-        print(
-            "⚠️ Could not parse reference decision."
-        )
-
-        # Safe fallback:
-        # If we cannot determine whether the request
-        # is safe to generate, ask for clarification
-        # instead of spending image-generation credits.
-
-        return (
-            "clarify",
-            "What would you like me to preserve or change "
-            "from the selected panel?"
-        )
-
-
-# ============================================================
 # MAIN CHAT FUNCTION
 # ============================================================
 
@@ -760,11 +633,7 @@ def craft_response(
         requires_visual_context(message)
     )
 
-    needs_reference_generation = (
-        requires_reference_generation(message)
-    )
-
-
+   
 
 
     print(
@@ -781,11 +650,7 @@ def craft_response(
         needs_visual_context
     )
 
-    print(
-        "NEEDS REFERENCE GENERATION:",
-        needs_reference_generation
-    )
-
+   
    
 
     # ========================================================
@@ -801,42 +666,7 @@ def craft_response(
             None
         )
 
-    if needs_reference_generation and not selected_image:
-
-        return (
-            "Please click **📎 Use Panel** "
-            "to select a panel before generating "
-            "a reference.",
-            None
-        )
-
-
-    # ========================================================
-# REFERENCE GENERATION DECISION
-# ========================================================
-
-    if needs_reference_generation:
-
-        decision, clarification = (
-            decide_reference_request(message,session_id)
-        )
-
-        print(
-            "REFERENCE DECISION:",
-            decision
-        )
-
-        if decision == "clarify":
-
-            print(
-                "❓ REFERENCE REQUEST NEEDS CLARIFICATION"
-            )
-
-            return (
-                clarification,
-                None
-            )
-
+   
 
     # ========================================================
     # SELECT TOOLS
@@ -882,8 +712,7 @@ def craft_response(
     # --------------------------------------------------------
 
     if (
-        (needs_visual_context or needs_reference_generation)
-        and selected_image
+        needs_visual_context and selected_image
     ):
 
         image_data = encode_image(
@@ -968,11 +797,68 @@ def craft_response(
 
     print("=========================================\n")
     
-    response = openrouter_chat_completion(
-    session_id=session_id,
-    **request_kwargs
-    )
+    try:
 
+        response = openrouter_chat_completion(
+            session_id=session_id,
+            **request_kwargs
+        )
+
+    except RuntimeError as e:
+
+        # Rate-limit errors are already user-friendly.
+        # Keep them separate from API/service failures.
+
+        error_message = str(e)
+
+        print(
+            "\n========== LLM REQUEST ERROR =========="
+        )
+
+        print(
+            "ERROR TYPE:",
+            type(e).__name__
+        )
+
+        print(
+            "ERROR:",
+            error_message
+        )
+
+        print(
+            "=======================================\n"
+        )
+
+        return (
+            f"⚠️ {error_message}",
+            None
+        )
+
+    except Exception as e:
+
+        print(
+            "\n========== LLM API ERROR =========="
+        )
+
+        print(
+            "ERROR TYPE:",
+            type(e).__name__
+        )
+
+        print(
+            "ERROR:",
+            str(e)
+        )
+
+        print(
+            "===================================\n"
+        )
+
+        return (
+            "⚠️ The AI service could not process your request. "
+            "Please try again later.",
+            None
+        )
 
 
     # ========================================================
@@ -1011,6 +897,34 @@ def craft_response(
     print(
         "========================================\n"
     )
+
+    # ========================================================
+    # DIRECT LLM RESPONSE
+    # ========================================================
+
+    if response.choices[0].finish_reason != "tool_calls":
+
+        direct_response = (
+            response.choices[0].message.content
+        )
+
+        print(
+            "\n🟢 DIRECT LLM RESPONSE — NO TOOL CALL"
+        )
+
+        print(
+            direct_response
+        )
+
+        print(
+            "====================================\n"
+        )
+
+        return (
+            direct_response,
+            None
+        )
+
 
     # ========================================================
     # TOOL-CALL LOOP
@@ -1125,63 +1039,29 @@ def craft_response(
             }
         )
 
-        print(
-            "\n🔥 TOOL RESULTS → "
-            "CONVERSATION-AWARE LLM\n"
-        )
-
-        # ----------------------------------------------------
-        # SYNTHESIS CALL
-        # ----------------------------------------------------
-
-        response = openrouter_chat_completion(
-            session_id=session_id,
-            model=config.MODEL,
-            messages=messages,
-            max_completion_tokens=1200
-        )
 
         print(
-            "\n========== SYNTHESIS LLM RESPONSE =========="
+            "\n🔥 TOOL RESULTS READY FOR "
+            "FINAL STREAMING RESPONSE\n"
         )
 
-        print(
-            "FINISH REASON:",
-            response.choices[0].finish_reason
-        )
+        break
 
-        print(
-            "TOOL CALLS:",
-            response.choices[0].message.tool_calls
-        )
-
-        print(
-            "CONTENT:",
-            response.choices[0].message.content
-        )
-
-        print(
-            "========================================\n"
-        )
-
+      
     # ========================================================
     # FINAL RESPONSE
     # ========================================================
 
-    final_message = (
-        response.choices[0].message
+    response_stream = stream_final_response(
+        session_id=session_id,
+        model=config.MODEL,
+        messages=messages,
+        max_completion_tokens=1200
     )
 
-    if final_message.content is None:
-
-        return (
-            "I couldn't generate a final response.",
-            generation_request
-        )
-
     return (
-        final_message.content,
+        response_stream,
         generation_request
     )
 
-
+    

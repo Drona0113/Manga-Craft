@@ -240,10 +240,18 @@ GET_PROJECT_MEMORY_TOOL = {
     "function": {
         "name": "get_project_memory",
         "description": (
-            "Retrieve persistent memories from the current manga "
-            "project. Use this when you need established facts, "
-            "creative decisions, or other information stored in "
-            "project memory.Do not use this tool to save or update information"
+             "Retrieve the project's stored persistent memories for broad "
+            "or general memory-retrieval requests. Use this when the user "
+            "asks what is remembered, what information is stored, what "
+            "memories exist, what has been established, or what is known "
+            "about a subject across the project's memories. "
+            "Examples include: 'What do you remember about Kageyama?', "
+            "'What information is stored about Kageyama?', "
+            "'What character information is remembered?', "
+            "'Show me the project's memories.' "
+            "This tool is for BROAD memory retrieval, not a single targeted "
+            "fact. For a specific fact such as 'What is Kageyama's jersey "
+            "number?', use search_project instead."
         ),
         "parameters": {
             "type": "object",

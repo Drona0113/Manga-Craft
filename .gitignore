@@ -3,9 +3,12 @@
 __pycache__/
 .ipynb_checkpoints/
 data/*.db
+data/projects/
 .gradio/
 
 # Temporary test files
 test_7_tool_execution.py
 test_7_tool_integration.py
 test_context_management.py
+test_error_handling.py
+test_streaming.py

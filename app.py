@@ -16,10 +16,6 @@ from database.project_repository import (
     get_last_opened_project
 )
 
-from database.panel_repository import (
-    get_latest_panel
-)
-
 from database.conversation_repository import (
     create_conversation,
     get_conversation,
@@ -82,14 +78,21 @@ def load_conversation_choices(project_id):
 
 
 
-def chat_response(message, history, panel_image, selected_panel, conversation_history,project_choice,current_conversation_id,request:gr.Request):
+def chat_response(
+    message,
+    history,
+    panel_image,
+    selected_panel,
+    conversation_history,
+    project_choice,
+    current_conversation_id,
+    request: gr.Request
+):
 
     print("\n========== CHAT RESPONSE ==========")
     print("MESSAGE:", message)
-    # print("CHATBOT HISTORY:", history)
-    
     print("PANEL IMAGE:", panel_image)
-    print("PROJECT CHOICE : ",project_choice)
+    print("PROJECT CHOICE:", project_choice)
     print("SELECTED PANEL:", selected_panel)
     print("===================================\n")
 
@@ -100,29 +103,37 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
     history = history or []
     conversation_history = conversation_history or []
 
-    print("CONVERSATION HISTORY:", conversation_history)
-    #GET CURRENT PROJECT
+    # ========================================================
+    # PROJECT VALIDATION
+    # ========================================================
+
     if not project_choice:
 
         gr.Warning(
             "Please select a project first."
         )
 
-        return (
+        yield (
             history,
             conversation_history,
-            None
+            None,
+            False
         )
+
+        return
 
     project_id = int(
         project_choice.split("|")[0].strip()
     )
 
-    print(" CURRENT PROJECT ID:", project_id)
+    print(
+        " CURRENT PROJECT ID:",
+        project_id
+    )
 
-    # --------------------------------------------------------
-    # Get active conversation
-    # --------------------------------------------------------
+    # ========================================================
+    # ACTIVE CONVERSATION
+    # ========================================================
 
     conversation_id = current_conversation_id
 
@@ -144,12 +155,13 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
             conversation_id
         )
 
-
-    # --------------------------------------------------------
+    # ========================================================
     # CONVERSATION TURN LIMIT
-    # --------------------------------------------------------
+    # ========================================================
 
-    current_turns = len(conversation_history) // 2
+    current_turns = len(
+        conversation_history
+    ) // 2
 
     print(
         "CURRENT TURNS:",
@@ -171,16 +183,18 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
             conversation_id
         )
 
-        return (
+        yield (
             history,
             conversation_history,
             None,
             True
         )
 
-    # --------------------------------------------------------
-    # Generate response
-    # --------------------------------------------------------
+        return
+
+    # ========================================================
+    # GENERATE RESPONSE
+    # ========================================================
 
     try:
 
@@ -202,13 +216,129 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
                 duration=7
             )
 
-            return (
+            yield (
                 history,
                 conversation_history,
-                None
+                None,
+                False
             )
 
+            return
+
         raise
+
+    # ========================================================
+    # HANDLE GENERATION REQUEST / NORMAL RESPONSE
+    # ========================================================
+
+    if new_generation_request:
+
+        final_response = response
+
+        updated_history = conversation_history + [
+            {
+                "role": "user",
+                "content": message
+            },
+            {
+                "role": "assistant",
+                "content": final_response
+            }
+        ]
+
+        save_message(
+            conversation_id,
+            "user",
+            message
+        )
+
+        save_message(
+            conversation_id,
+            "assistant",
+            final_response
+        )
+
+        touch_conversation(
+            conversation_id
+        )
+
+        print(
+            "✅ Conversation messages saved to SQLite"
+        )
+
+        gr.Info(
+            "🎨 Generation Request Ready\n\n"
+            "Your reference request is ready. "
+            "Click **Generate Reference** in "
+            "the Panel Tools to generate the image.",
+            duration=7
+        )
+
+        conversation_locked = (
+            len(updated_history) // 2
+            >= MAX_CONVERSATION_TURNS
+        )
+
+        yield (
+            updated_history,
+            updated_history,
+            new_generation_request,
+            conversation_locked
+        )
+
+        return
+
+    # ========================================================
+    # STREAM FINAL RESPONSE
+    # ========================================================
+
+    response_stream = response
+
+    streamed_text = ""
+
+    # Start with user message + empty assistant message
+    streaming_history = conversation_history + [
+        {
+            "role": "user",
+            "content": message
+        },
+        {
+            "role": "assistant",
+            "content": ""
+        }
+    ]
+
+    print(
+        "\n========== GRADIO STREAM START =========="
+    )
+
+    for chunk in response_stream:
+
+        streamed_text += chunk
+
+        streaming_history[-1]["content"] = (
+            streamed_text
+        )
+
+        yield (
+            streaming_history,
+            conversation_history,
+            new_generation_request,
+            False
+        )
+
+    print(
+        "\n========== GRADIO STREAM FINISHED =========="
+    )
+
+    print(
+        "FINAL RESPONSE LENGTH:",
+        len(streamed_text)
+    )
+
+    # ========================================================
+    # SAVE COMPLETE RESPONSE
+    # ========================================================
 
     updated_history = conversation_history + [
         {
@@ -217,12 +347,10 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
         },
         {
             "role": "assistant",
-            "content": response
+            "content": streamed_text
         }
     ]
-    # ========================================================
-    # SAVE CONVERSATION TO SQLITE
-    # ========================================================
+
     save_message(
         conversation_id,
         "user",
@@ -232,7 +360,7 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
     save_message(
         conversation_id,
         "assistant",
-        response
+        streamed_text
     )
 
     touch_conversation(
@@ -242,29 +370,27 @@ def chat_response(message, history, panel_image, selected_panel, conversation_hi
     print(
         "✅ Conversation messages saved to SQLite"
     )
-    print("\n========== UPDATED CONVERSATION HISTORY ==========")
-    #print(updated_history)
-    print("==================================================\n")
 
+    print(
+        "\n========== UPDATED CONVERSATION HISTORY =========="
+    )
 
-    if new_generation_request:
-        gr.Info(
-            "🎨 Generation Request Ready\n\n"
-            "Your reference request is ready. "
-            "Click **Generate Reference** in the Panel Tools "
-            "to generate the image.",
-            duration=7
-        )
+    print(
+        "==================================================\n"
+    )
 
-    conversation_locked = (len(updated_history) // 2 >= MAX_CONVERSATION_TURNS)
+    conversation_locked = (
+        len(updated_history) // 2
+        >= MAX_CONVERSATION_TURNS
+    )
 
-    return (
+    # Final state after streaming completes
+    yield (
         updated_history,
         updated_history,
         new_generation_request,
         conversation_locked
     )
-
 
 
 def conversation_limit_reached(conversation_history):
@@ -751,196 +877,6 @@ def update_panel_image_text(panel_image):
 
     return f"**Panel Image:** `{filename}`"
 
-# def generate_reference_action(selected_panel, history):
-
-#     print("\n========== GENERATE REFERENCE ==========")
-#     print("Selected Panel:", selected_panel)
-
-#     print("HISTORY VALUE:")
-#     print(history)
-
-#     print("HISTORY TYPE:")
-#     print(type(history))
-
-#     if history:
-#         print("HISTORY LENGTH:")
-#         print(len(history))
-
-#     print("========================================\n")
-#     # --------------------------------------------------------
-#     # Check selected panel
-#     # --------------------------------------------------------
-
-#     if not selected_panel:
-#         print("❌ No selected panel")
-#         return None
-
-#     # --------------------------------------------------------
-#     # Check history
-#     # --------------------------------------------------------
-
-#     if not history:
-#         print("❌ No chatbot history")
-#         return None
-
-#     # --------------------------------------------------------
-#     # Find the latest textual user request
-#     # --------------------------------------------------------
-
-#     latest_user_message = None
-
-#     for chat_message in reversed(history):
-
-#         if chat_message["role"] != "user":
-#             continue
-
-#         content = chat_message.get("content")
-
-#         # ----------------------------------------------------
-#         # Normal text message
-#         # ----------------------------------------------------
-
-#         if isinstance(content, str):
-
-#             # Ignore Gradio file URLs
-#             if "/gradio_api/file=" not in content:
-#                 latest_user_message = content
-#                 break
-
-#         # ----------------------------------------------------
-#         # Message containing image + text
-#         # ----------------------------------------------------
-
-#         elif isinstance(content, list):
-
-#             text_parts = []
-
-#             for item in content:
-
-#                 # Plain text
-#                 if isinstance(item, str):
-
-#                     if "/gradio_api/file=" not in item:
-#                         text_parts.append(item)
-
-#                 # Image/file dictionary
-#                 elif isinstance(item, dict):
-
-#                     # Ignore image information
-#                     if "path" in item:
-#                         continue
-
-#                     if "url" in item:
-#                         continue
-
-#             if text_parts:
-
-#                 latest_user_message = " ".join(text_parts)
-#                 break
-
-#     # --------------------------------------------------------
-#     # Debug extracted request
-#     # --------------------------------------------------------
-
-#     print("\nLATEST USER REQUEST:")
-#     print(latest_user_message)
-
-#     if not latest_user_message:
-#         print("❌ No user request found")
-#         return None
-
-#     # --------------------------------------------------------
-#     # Build image-generation prompt
-#     # --------------------------------------------------------
-
-#     prompt = f"""
-# Create a manga drawing reference based on the selected panel.
-
-# User's request:
-# {latest_user_message}
-
-# Preserve the important visual relationships from the selected panel,
-# including the character pose, composition, perspective, character
-# placement, and major visual elements unless the user's request
-# explicitly asks to change them.
-
-# Do not introduce unrelated characters or major elements.
-
-# Generate the reference according to the user's request.
-# """
-
-#     # --------------------------------------------------------
-#     # Debug generation prompt
-#     # --------------------------------------------------------
-
-#     print("\nREFERENCE PROMPT:")
-#     print(prompt)
-
-#     # --------------------------------------------------------
-#     # Generate reference image
-#     # --------------------------------------------------------
-
-#     result = generate_reference(
-#         selected_panel,
-#         prompt
-#     )
-
-#     print("Generated:", result)
-#     print("========================================\n")
-
-#     # --------------------------------------------------------
-#     # Return generated image path
-#     # --------------------------------------------------------
-
-#     return result
-
-def test_generate_reference_action(
-    project_choice,
-    selected_panel,
-    generation_request
-):
-
-    print("\n========== TEST GENERATE REFERENCE ==========")
-
-    if not project_choice:
-        gr.Warning("Please select a project first.")
-        return []
-
-    if not selected_panel:
-        gr.Warning("Please click 📎 Use Panel first.")
-        return []
-
-    project_id = int(
-        project_choice.split("|")[0].strip()
-    )
-
-    # --------------------------------------------------------
-    # TEMPORARY TEST
-    # Use the selected panel as a fake generated image.
-    # --------------------------------------------------------
-
-    result = selected_panel
-
-    reference_id = create_generated_reference(
-        project_id=project_id,
-        file_path=result,
-        prompt=generation_request or "Test reference"
-    )
-
-    print("TEST REFERENCE ID:", reference_id)
-
-    # --------------------------------------------------------
-    # Reload references from database
-    # --------------------------------------------------------
-
-    references = get_generated_references(
-        project_id
-    )
-
-    return [
-        reference["file_path"]
-        for reference in references
-    ]
 
 def generate_reference_action(
     project_choice,
@@ -1015,11 +951,10 @@ def generate_reference_action(
 # Handle generation failure
 # --------------------------------------------------------
 
-    if not result:
+    if not result or result.startswith("⚠️"):
 
         gr.Warning(
-            "Reference generation failed. "
-            "Please check the terminal for the error details."
+          result or  "Reference generation failed. "
         )
 
         return []
