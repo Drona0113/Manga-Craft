@@ -4,6 +4,8 @@
 
 import gradio as gr
 
+import os
+
 from llm import craft_response
 from tools.panel_tools import analyze_panel,composition_analysis,generate_reference
 from database.project_repository import (
@@ -2589,4 +2591,6 @@ with gr.Blocks(
 # LAUNCH
 # ============================================================
 
-demo.launch(css=CUSTOM_CSS)
+demo.launch(css=CUSTOM_CSS,
+            server_name="0.0.0.0",
+            server_port=int(os.environ.get("PORT", 7860)))
