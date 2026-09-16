@@ -1,4 +1,8 @@
-from database.database import get_connection
+from database.database import get_connection, BASE_DIR
+
+from pathlib import Path
+import shutil
+
 
 
 # ============================================================
@@ -181,5 +185,23 @@ def delete_project(project_id):
     )
 
     conn.commit()
-
     conn.close()
+
+    # --------------------------------------------------------
+    # DELETE PROJECT FILES
+    # --------------------------------------------------------
+
+    project_dir = (
+        BASE_DIR
+        / "data"
+        / "projects"
+        / str(project_id)
+    )
+
+    if project_dir.exists():
+        shutil.rmtree(project_dir)
+        print(f"🗑️ Deleted project files: {project_dir}")
+    else:
+        print(f"ℹ️ No project directory found: {project_dir}")
+
+

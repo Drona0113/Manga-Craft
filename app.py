@@ -1091,7 +1091,6 @@ def create_project_action(project_name):
 def delete_project_action(project_choice):
 
     if not project_choice:
-
         return (
             gr.update(),
             "⚠️ Please select a project first."
@@ -1105,13 +1104,26 @@ def delete_project_action(project_choice):
 
     projects = load_projects()
 
+    if not projects:
+        return (
+            gr.update(
+                choices=[],
+                value=None
+            ),
+            "✅ Project deleted. No projects remaining."
+        )
+
+    # Select the first remaining project
+    next_project = projects[0]
+
     return (
         gr.update(
             choices=projects,
-            value=None
+            value=next_project
         ),
-        "✅ Project deleted."
+        f"✅ Project deleted. Switched to {next_project}."
     )
+
 
 
 def rename_project_action(
