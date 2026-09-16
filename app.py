@@ -1956,7 +1956,7 @@ with gr.Blocks(
             project_dropdown = gr.Dropdown(
                 label="Current Project",
                 choices=load_projects(),
-                value=get_default_project(),
+                value=get_default_project,
                 interactive=True,
                 elem_classes="mc-project-list"
             )
