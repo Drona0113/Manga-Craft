@@ -2,8 +2,9 @@
 
 from pathlib import Path
 from uuid import uuid4
+import base64
+import requests
 
-from huggingface_hub import InferenceClient
 from openai import OpenAI
 
 import config
@@ -230,27 +231,27 @@ def generate_reference(
 ) -> str:
     """
     Generate a reference image based on the selected panel
-    using Hugging Face image-to-image inference.
+    using OpenRouter image-to-image generation.
     """
 
     print(
-        "\n========== HUGGING FACE IMAGE GENERATION =========="
+        "\n========== OPENROUTER IMAGE GENERATION =========="
     )
-    print("Model:", config.HF_IMAGE_MODEL)
+    print("Model:", config.OPENROUTER_IMAGE_MODEL)
     print("Input:", image_path)
     print("Prompt:", prompt)
     print("Project:", project_id)
-    print("====================================================\n")
+    print("===================================================\n")
 
     try:
-        if not config.HF_TOKEN:
+        if not config.OPENROUTER_API_KEY:
             raise RuntimeError(
-                "Hugging Face API token is not configured."
+                "OpenRouter API key is not configured."
             )
 
-        if not config.HF_IMAGE_MODEL:
+        if not config.OPENROUTER_IMAGE_MODEL:
             raise RuntimeError(
-                "Hugging Face image model is not configured."
+                "OpenRouter image model is not configured."
             )
 
         if not image_path:
@@ -273,22 +274,59 @@ def generate_reference(
                 "No project ID was provided."
             )
 
-        client = InferenceClient(
-            provider="auto",
-            api_key=config.HF_TOKEN
-        )
+        # Convert image to base64 data URL for OpenRouter
+        image_data = encode_image(image_path)
 
-        image = client.image_to_image(
-            image=image_path,
-            prompt=prompt,
-            model=config.HF_IMAGE_MODEL,
-        )
+        # Prepare OpenRouter API request
+        url = f"{config.OPENROUTER_URL}/images"
+        headers = {
+            "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
 
-        if image is None:
+        payload = {
+            "model": config.OPENROUTER_IMAGE_MODEL,
+            "prompt": prompt,
+            "input_references": [
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_data
+                    }
+                }
+            ]
+        }
+
+        print("Sending request to OpenRouter...")
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+
+        # Handle non-2xx responses
+        if response.status_code >= 400:
+            error_data = response.json() if response.content else {}
+            error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
             raise RuntimeError(
-                "Hugging Face returned no image."
+                f"OpenRouter API error: {error_message}"
             )
 
+        # Parse response
+        result = response.json()
+
+        if "data" not in result or not result["data"]:
+            raise RuntimeError(
+                "OpenRouter returned no image data in response."
+        )
+
+        # Extract base64 image data
+        image_data_b64 = result["data"][0].get("b64_json")
+        if not image_data_b64:
+            raise RuntimeError(
+                "OpenRouter response missing base64 image data."
+        )
+
+        # Decode base64 to bytes
+        image_bytes = base64.b64decode(image_data_b64)
+
+        # Save to file
         generated_references_dir = (
             PROJECT_DATA_DIR
             / str(project_id)
@@ -305,12 +343,18 @@ def generate_reference(
             / f"generated_reference_{uuid4().hex}.png"
         )
 
-        image.save(generated_image_path)
+        with open(generated_image_path, "wb") as f:
+            f.write(image_bytes)
 
         if not generated_image_path.is_file():
             raise RuntimeError(
                 "The generated image could not be saved."
             )
+
+        # Log cost if available
+        if "usage" in result:
+            cost = result["usage"].get("cost", 0)
+            print(f"Cost: ${cost:.4f}")
 
         print("✅ Generated reference saved:")
         print(generated_image_path)

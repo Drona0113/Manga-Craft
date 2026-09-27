@@ -434,7 +434,6 @@ Create a `.env` file:
 
 ```env
 OPENROUTER_API_KEY=your_openrouter_api_key
-HF_TOKEN=your_huggingface_token
 ```
 
 The current V2 LLM path uses **OpenRouter**.
@@ -455,10 +454,9 @@ The Gradio interface will start locally.
 
 ## 🔐 Environment Variables
 
-| Variable             | Purpose                                          |
-| -------------------- | ------------------------------------------------ |
-| `OPENROUTER_API_KEY` | LLM API access                                   |
-| `HF_TOKEN`           | Hugging Face authentication for image generation |
+| Variable             | Purpose                           |
+| -------------------- | --------------------------------- |
+| `OPENROUTER_API_KEY` | LLM and image generation API access |
 
 API keys should be stored as environment variables locally and as deployment secrets when deployed.
 
