@@ -1,10 +1,25 @@
+# Virtual environments
 .venv/
+Manga-Craft-V2/.venv/
+Manga-Craft-V3/backend/.venv/
+
+# Environment files
 .env
+.env.*
+
+# Python cache
 __pycache__/
 .ipynb_checkpoints/
+
+# V2 data (SQLite database and project files)
 data/*.db
 data/projects/
+Manga-Craft-V2/data/*.db
+Manga-Craft-V2/data/projects/
+
+# Gradio cache
 .gradio/
+Manga-Craft-V2/.gradio/
 
 # Temporary test files
 test_7_tool_execution.py
@@ -12,3 +27,11 @@ test_7_tool_integration.py
 test_context_management.py
 test_error_handling.py
 test_streaming.py
+
+# Internal documentation
+AGENTS.md
+docs/internal/
+
+# Node modules
+node_modules/
+Manga-Craft-V3/frontend/node_modules/
