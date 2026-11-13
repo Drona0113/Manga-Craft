@@ -6,6 +6,8 @@ Manga-Craft-V3/backend/.venv/
 # Environment files
 .env
 .env.*
+Manga-Craft-V3/frontend/.env
+Manga-Craft-V3/backend/.env
 
 # Python cache
 __pycache__/
@@ -13,9 +15,8 @@ __pycache__/
 
 # V2 data (SQLite database and project files)
 data/*.db
-data/projects/
 Manga-Craft-V2/data/*.db
-Manga-Craft-V2/data/projects/
+
 
 # Gradio cache
 .gradio/
@@ -35,3 +36,7 @@ docs/internal/
 # Node modules
 node_modules/
 Manga-Craft-V3/frontend/node_modules/
+
+# Frontend build
+Manga-Craft-V3/frontend/dist/
+Manga-Craft-V3/frontend/.vite/

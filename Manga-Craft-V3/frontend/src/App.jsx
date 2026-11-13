@@ -1,37 +1,22 @@
 import React from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Layout from './components/layout/Layout'
+import Home from './pages/Home'
+import Projects from './pages/Projects'
+import Chat from './pages/Chat'
 
 function App() {
   return (
-    <div className="app">
-      <header>
-        <h1>MangaCraft V3</h1>
-        <p>AI-powered manga creation workspace</p>
-      </header>
-      <main>
-        <div className="status">
-          <h2>Development Status</h2>
-          <p>Phase: V3.1 - Project Structure & Environment Setup</p>
-          <div className="api-status">
-            <h3>API Status</h3>
-            <button onClick={checkApi}>Check API</button>
-            <p id="api-response">Click to check API status</p>
-          </div>
-        </div>
-      </main>
-    </div>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/chat" element={<Chat />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   )
-}
-
-async function checkApi() {
-  try {
-    const response = await fetch('http://localhost:8000/health')
-    const data = await response.json()
-    document.getElementById('api-response').textContent = 
-      `Status: ${data.status}`
-  } catch (error) {
-    document.getElementById('api-response').textContent = 
-      `Error: ${error.message}`
-  }
 }
 
 export default App

@@ -34,6 +34,20 @@ This document records important architectural and design decisions made during M
 **Alternatives Considered**: PostgreSQL (more traditional but unfamiliar to developer)
 **Trade-offs**: Less strict schema enforcement, but acceptable for document-based project data
 
+### Why Motor was selected instead of PyMongo
+**Date**: 2026-11-13
+**Context**: MongoDB driver selection for FastAPI
+**Decision**: Use Motor (async driver) instead of PyMongo (sync driver)
+**Rationale**:
+- FastAPI is an async framework (built on async/await)
+- Motor is the async version of PyMongo, designed for async frameworks
+- PyMongo is synchronous and would block the entire application
+- Motor allows non-blocking database operations for better performance
+- Multiple requests can be handled simultaneously without blocking
+- PyMongo is better for sync frameworks like Flask/Django
+**Alternatives Considered**: PyMongo (synchronous, blocks FastAPI)
+**Trade-offs**: Motor has slightly different API than PyMongo, but necessary for FastAPI performance
+
 ### Why MongoDB Atlas Vector Search was selected
 **Date**: TBD
 **Context**: Vector search technology for RAG implementation

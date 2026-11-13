@@ -5,11 +5,26 @@ Main application entry point
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from config.database import Database
+from models import User, Project
+from api import projects_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    # Startup
+    await Database.connect()
+    await Database.init_models([User, Project])
+    yield
+    # Shutdown
+    await Database.close()
 
 app = FastAPI(
     title="MangaCraft V3 API",
     description="AI-powered manga creation workspace",
-    version="3.0.0"
+    version="3.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware configuration
@@ -21,6 +36,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include API routers
+app.include_router(projects_router)
+
 
 @app.get("/")
 async def root():
@@ -28,14 +46,18 @@ async def root():
     return {
         "message": "MangaCraft V3 API",
         "version": "3.0.0",
-        "status": "development"
+        "status": "development",
+        "database": "MongoDB"
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "database": "connected" if Database.client else "disconnected"
+    }
 
 
 if __name__ == "__main__":
