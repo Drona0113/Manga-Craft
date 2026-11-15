@@ -205,6 +205,16 @@ Enhanced Response
 - Layout components (Header, Sidebar)
 - API client setup (Axios)
 - TailwindCSS v4 styling
+- Theme system (dark/light mode with persistence)
+- Project CRUD UI (create, read, update, delete)
+- Reusable components (Button, Modal, Loading)
+- Project-specific components (ProjectCard, ProjectForm, DeleteProjectDialog)
+- Form validation and error handling
+- Responsive design with mobile drawer
+- Lucide icons for professional UI
+- Framer Motion for smooth animations
+- Tutorial modal for new users
+- Landing page with project description
 
 ## Planned Module Structure
 
@@ -316,6 +326,24 @@ mangacraft/
 - Built-in vector search
 - Familiar to developer (MERN)
 - Good for document-based data
+
+### Why Lucide React
+- Professional icon library
+- Consistent, clean design
+- Tree-shakeable (small bundle size)
+- Easy to customize with CSS
+
+### Why Framer Motion
+- Smooth, professional animations
+- Declarative API (React-like)
+- Optimized for performance
+- Better than CSS animations for complex interactions
+
+### Why Theme System
+- Dark/light mode for accessibility
+- User preference persistence
+- CSS variables for efficient theming
+- No theme flash on initial load
 
 ### Why Motor (MongoDB Driver)
 - Async driver designed for FastAPI

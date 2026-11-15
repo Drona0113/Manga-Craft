@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Date**: 2026-11-13
-**Current Phase**: V3.5 - Basic Project CRUD
-**Overall Progress**: Phase 5 of 20 (20%)
+**Date**: 2026-11-15
+**Current Phase**: V3.6 - Authentication System
+**Overall Progress**: Phase 6 of 20 (25%)
 
 ## Pre-V3 Work Completed
 
@@ -137,16 +137,59 @@
 - **Completion Date**: 2026-11-13
 
 ### V3.5: Basic Project CRUD
-- **Status**: [ ] Not Started
-- **What Needs to be Implemented**:
-  - Project CRUD endpoints in React UI
-  - Project creation form
-  - Project list display
-  - Project edit functionality
-  - Project delete functionality
-  - Form validation
-  - Error handling
+- **Status**: [x] Completed
+- **What Was Implemented**:
+  - Theme system with dark/light mode and persistence (ThemeContext)
+  - CSS variables for consistent theming
+  - Reusable components: Button, Modal, Loading
+  - Project-specific components: ProjectCard, ProjectForm, DeleteProjectDialog
+  - Projects page with search, grid/list view toggle, and full CRUD
+  - Form validation with error messages
+  - Loading states for all operations
+  - Error handling with user feedback
+  - Dark Editorial Manga Studio design system
+  - Responsive sidebar with mobile drawer
+  - Client-side routing with React Router (no page reloads)
+  - Home page redesigned as landing/about page
+  - Tutorial modal for new users with localStorage persistence
+  - Lucide icons for professional UI
+  - Framer Motion for smooth animations
+- **Files Created**:
+  - `frontend/src/context/ThemeContext.jsx`
+  - `frontend/src/components/common/Button.jsx`
+  - `frontend/src/components/common/Modal.jsx`
+  - `frontend/src/components/common/Loading.jsx`
+  - `frontend/src/components/projects/ProjectCard.jsx`
+  - `frontend/src/components/projects/ProjectForm.jsx`
+  - `frontend/src/components/projects/DeleteProjectDialog.jsx`
+- **Files Modified**:
+  - `frontend/src/index.css` - CSS variables for theming
+  - `frontend/src/pages/Projects.jsx` - Complete CRUD implementation
+  - `frontend/src/pages/Home.jsx` - Landing page with features
+  - `frontend/src/main.jsx` - ThemeProvider wrapper
+  - `frontend/src/components/layout/Header.jsx` - Theme toggle, Lucide icons
+  - `frontend/src/components/layout/Sidebar.jsx` - React Router Links, responsive
+  - `frontend/src/components/layout/Layout.jsx` - Mobile menu state
 - **Tests/Verification**:
+  - ✅ Projects load from MongoDB
+  - ✅ New projects can be created
+  - ✅ Existing projects can be edited
+  - ✅ Projects can be deleted with confirmation
+  - ✅ Validation works (name required)
+  - ✅ API errors handled gracefully
+  - ✅ Loading states work
+  - ✅ Data persists after browser refresh
+  - ✅ Dark theme works
+  - ✅ Light theme works
+  - ✅ Theme preference persists
+  - ✅ Responsive layouts work
+  - ✅ Client-side routing works (no page reloads)
+  - ✅ Frontend build successful (393.69 kB, 130.33 kB gzipped)
+- **Known Limitations**:
+  - V2-to-V3 migration script not implemented (projects remain in separate systems)
+- **Next Phase**: V3.6 - Authentication System
+- **Unfinished Work**: None
+- **Completion Date**: 2026-11-15
   - Can create projects from UI
   - Can list projects from UI
   - Can edit projects from UI

@@ -57,13 +57,14 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - **Completion Date**: 2026-11-13
 
 #### V3.5: Basic Project CRUD
-- [ ] Not Started
+- [x] Completed
 - **Goal**: Implement project management in V3, preserving V2 project functionality
-- **Technologies**: FastAPI endpoints, React UI, MongoDB repositories
-- **What is Implemented**: Project CRUD endpoints, React project management UI, migration script
-- **V2 Functionality Preserved/Migrated**: V2 projects remain in SQLite, V3 can import V2 projects
-- **Tests/Success Criteria**: Can create/list/edit/delete projects, projects persist in MongoDB
+- **Technologies**: FastAPI endpoints, React UI, MongoDB repositories, ThemeContext, Lucide icons, Framer Motion
+- **What is Implemented**: Project CRUD endpoints, React project management UI, theme system, responsive design, tutorial modal
+- **V2 Functionality Preserved/Migrated**: V2 projects remain in SQLite, V3 projects in MongoDB (dual system)
+- **Tests/Success Criteria**: Can create/list/edit/delete projects, projects persist in MongoDB, theme toggle works, responsive design works
 - **Must Complete Before V3.6**: All CRUD operations tested, UI validates inputs, error handling works
+- **Completion Date**: 2026-11-15
 
 ### Milestone 2: Core Features (V3.6–V3.10)
 

@@ -1,31 +1,102 @@
-function Sidebar() {
+import { useLocation, Link } from 'react-router-dom';
+
+function Sidebar({ mobileOpen, onClose }) {
+  const location = useLocation();
+
+  const navItems = [
+    { section: 'Workspace', items: [
+      { path: '/', label: 'Home', active: location.pathname === '/' },
+      { path: '/projects', label: 'Projects', active: location.pathname === '/projects' },
+    ]},
+    { section: 'Library', items: [
+      { path: '/ai-studio', label: 'AI Studio', disabled: true },
+      { path: '/memory', label: 'Memory', disabled: true },
+      { path: '/panels', label: 'Panels', disabled: true },
+      { path: '/references', label: 'References', disabled: true },
+    ]},
+    { section: 'General', items: [
+      { path: '/settings', label: 'Settings', disabled: true },
+    ]},
+  ];
+
   return (
-    <aside className="w-64 bg-[#2a2a2a] border-r border-[#3a3a3a] min-h-screen">
-      <nav className="p-4">
-        <ul className="space-y-2">
-          <li>
-            <a href="/projects" className="block px-4 py-2 text-white hover:bg-[#3a3a3a] rounded-lg transition">
-              Projects
-            </a>
-          </li>
-          <li>
-            <a href="/chat" className="block px-4 py-2 text-white hover:bg-[#3a3a3a] rounded-lg transition">
-              Chat
-            </a>
-          </li>
-          <li>
-            <a href="/panels" className="block px-4 py-2 text-white hover:bg-[#3a3a3a] rounded-lg transition">
-              Panels
-            </a>
-          </li>
-          <li>
-            <a href="/memory" className="block px-4 py-2 text-white hover:bg-[#3a3a3a] rounded-lg transition">
-              Memory
-            </a>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+    <>
+      <aside className="w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] min-h-screen hidden lg:block">
+        <nav className="p-4">
+          {navItems.map((group, groupIndex) => (
+            <div key={groupIndex} className="mb-6">
+              <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+                {group.section}
+              </h3>
+              <ul className="space-y-1">
+                {group.items.map((item, itemIndex) => (
+                  <li key={itemIndex}>
+                    {item.disabled ? (
+                      <span className="block px-4 py-2 rounded-lg text-[var(--text-secondary)] opacity-50 cursor-not-allowed">
+                        {item.label}
+                      </span>
+                    ) : (
+                      <Link
+                        to={item.path}
+                        className={`block px-4 py-2 rounded-lg transition ${
+                          item.active
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[var(--bg-surface)] border-r border-[var(--border)] transform transition-transform lg:hidden ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <nav className="p-4">
+          {navItems.map((group, groupIndex) => (
+            <div key={groupIndex} className="mb-6">
+              <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+                {group.section}
+              </h3>
+              <ul className="space-y-1">
+                {group.items.map((item, itemIndex) => (
+                  <li key={itemIndex}>
+                    {item.disabled ? (
+                      <span className="block px-4 py-2 rounded-lg text-[var(--text-secondary)] opacity-50 cursor-not-allowed">
+                        {item.label}
+                      </span>
+                    ) : (
+                      <Link
+                        to={item.path}
+                        onClick={onClose}
+                        className={`block px-4 py-2 rounded-lg transition ${
+                          item.active
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+      </aside>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+    </>
   );
 }
 
