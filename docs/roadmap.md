@@ -79,13 +79,15 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - **Completion Date**: 2026-11-16
 
 #### V3.7: Project Ownership & Authorization
-- [ ] Not Started
+- [x] Completed
 - **Goal**: Enforce project ownership so users can only access their own projects
 - **Technologies**: Project ownership, authorization middleware, user-project relationships
-- **What is Implemented**: Project ownership checks, project list filtering, cascade delete
+- **What is Implemented**: Project ownership checks, project list filtering (cascade delete deferred to user management phase)
 - **V2 Functionality Preserved**: V2 remains single-user (no ownership needed)
 - **Tests/Success Criteria**: User A cannot see/access User B's projects, unauthorized requests return 403
 - **Must Complete Before V3.8**: Ownership checks tested, authorization middleware verified
+- **Completion Date**: 2026-11-16
+- **Note**: Implemented as part of V3.6 authentication system. Cascade delete deferred to future user management phase.
 
 #### V3.8: Conversation System Migration
 - [ ] Not Started

@@ -3,8 +3,8 @@
 ## Current Status
 
 **Date**: 2026-11-16
-**Current Phase**: V3.7 - User Profile & Settings
-**Overall Progress**: Phase 7 of 20 (30%)
+**Current Phase**: V3.8 - Conversation System Migration
+**Overall Progress**: Phase 8 of 20 (35%)
 
 ## Pre-V3 Work Completed
 
@@ -251,7 +251,32 @@
 - **Unfinished Work**: None
 - **Completion Date**: 2026-11-16
 
-### V3.7-V3.20
+### V3.7: Project Ownership & Authorization
+- **Status**: [x] Completed
+- **What Was Implemented**:
+  - Project ownership checks on all project endpoints
+  - Project list filtering by user_id
+  - Authorization middleware with 403 responses
+  - User cannot access other users' projects
+- **Implementation Details**:
+  - Implemented as part of V3.6 authentication system
+  - All project routes check user_id matches authenticated user
+  - Project list filtered to show only user's own projects
+  - Unauthorized access returns 403 Forbidden
+- **Tests/Verification**:
+  - ✅ User A cannot see User B's projects
+  - ✅ User A cannot access User B's project (GET)
+  - ✅ User A cannot edit User B's project (PUT)
+  - ✅ User A cannot delete User B's project (DELETE)
+  - ✅ Unauthorized requests return 403
+- **Known Limitations**:
+  - Cascade delete not implemented (when user deleted, projects remain)
+  - Deferred to future user management phase
+- **Next Phase**: V3.8 - Conversation System Migration
+- **Unfinished Work**: None
+- **Completion Date**: 2026-11-16
+
+### V3.8-V3.20
 - **Status**: [ ] Not Started
 - **Details**: See roadmap.md for complete phase descriptions
 
