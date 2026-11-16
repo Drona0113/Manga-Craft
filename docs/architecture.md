@@ -114,6 +114,34 @@ Tool Execution
 Response Streaming
 ```
 
+### AI Studio Workspace (V3.8)
+```
+Full-Screen AI Studio
+    ↓
+AdaptiveLayout (Three-Panel)
+    ├── Left Panel - Conversation Sidebar
+    │   ├── Conversation List
+    │   ├── Create Conversation
+    │   ├── Switch Conversations
+    │   └── Delete Conversations
+    ├── Center Panel - Chat Workspace
+    │   ├── Message Timeline
+    │   ├── Message Composer
+    │   └── Message Display
+    └── Right Panel - Project Intelligence
+        ├── Overview (V3.9)
+        ├── Characters (V3.9)
+        ├── Story (V3.9)
+        └── Context (V3.9-V3.12)
+```
+
+**Project Intelligence Panel Architecture:**
+- Configuration-based sections array (easy to extend)
+- Reusable `IntelligenceSection` component for consistent UI
+- Supports `actions` prop for edit/delete buttons
+- Placeholder content in V3.8, real data in V3.9+
+- Flexible for future features (world building, locations, themes, etc.)
+
 ### Data Flow for AI Requests
 ```
 User Message

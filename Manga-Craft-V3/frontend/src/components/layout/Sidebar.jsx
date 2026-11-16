@@ -9,7 +9,6 @@ function Sidebar({ mobileOpen, onClose }) {
       { path: '/projects', label: 'Projects', active: location.pathname === '/projects' },
     ]},
     { section: 'Library', items: [
-      { path: '/ai-studio', label: 'AI Studio', disabled: true },
       { path: '/memory', label: 'Memory', disabled: true },
       { path: '/panels', label: 'Panels', disabled: true },
       { path: '/references', label: 'References', disabled: true },
@@ -38,6 +37,7 @@ function Sidebar({ mobileOpen, onClose }) {
                     ) : (
                       <Link
                         to={item.path}
+                        onClick={onClose}
                         className={`block px-4 py-2 rounded-lg transition ${
                           item.active
                             ? 'bg-[var(--accent)] text-white'

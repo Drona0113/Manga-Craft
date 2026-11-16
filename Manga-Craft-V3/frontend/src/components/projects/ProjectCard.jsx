@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, MessageSquare } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 function ProjectCard({ project, onEdit, onDelete }) {
   const [showMenu, setShowMenu] = useState(false);
@@ -48,8 +49,17 @@ function ProjectCard({ project, onEdit, onDelete }) {
       {project.description && (
         <p className="text-[var(--text-secondary)] text-sm mb-4 line-clamp-2">{project.description}</p>
       )}
-      <div className="text-xs text-[var(--text-secondary)] mb-4">
-        {new Date(project.created_at).toLocaleDateString()}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-[var(--text-secondary)]">
+          {new Date(project.created_at).toLocaleDateString()}
+        </div>
+        <Link
+          to={`/projects/${project._id}/conversation`}
+          className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition-opacity text-sm"
+        >
+          <MessageSquare className="w-4 h-4" />
+          Open in AI Studio
+        </Link>
       </div>
     </div>
   );
