@@ -69,13 +69,14 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 ### Milestone 2: Core Features (V3.6–V3.10)
 
 #### V3.6: Authentication & User System
-- [ ] Not Started
+- [x] Completed
 - **Goal**: Implement user authentication with registration, login, and session management
-- **Technologies**: User model, bcrypt, JWT tokens, authentication middleware
-- **What is Implemented**: User registration/login endpoints, JWT tokens, auth dependency, login/registration UI
+- **Technologies**: User model, bcrypt, JWT tokens, authentication middleware, AuthContext
+- **What is Implemented**: User registration/login endpoints, JWT tokens, auth dependency, login/registration UI, protected routes, logout functionality
 - **V2 Functionality Preserved**: V2 remains single-user (no auth needed)
-- **Tests/Success Criteria**: Can register/login, tokens expire, protected routes reject unauthenticated requests
+- **Tests/Success Criteria**: Can register/login, tokens expire, protected routes reject unauthenticated requests, users can only see their own projects
 - **Must Complete Before V3.7**: Registration flow tested, login flow tested, token refresh tested
+- **Completion Date**: 2026-11-16
 
 #### V3.7: Project Ownership & Authorization
 - [ ] Not Started

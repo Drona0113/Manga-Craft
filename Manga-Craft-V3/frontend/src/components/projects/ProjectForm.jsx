@@ -5,7 +5,6 @@ function ProjectForm({ project, onSubmit, onCancel, loading }) {
   const [formData, setFormData] = useState({
     name: project?.name || '',
     description: project?.description || '',
-    user_id: 'test_user_123',
   });
 
   const [errors, setErrors] = useState({});

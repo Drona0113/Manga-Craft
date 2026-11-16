@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from config.database import Database
 from models import User, Project
 from api import projects_router
+from api.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,6 +39,7 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(projects_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

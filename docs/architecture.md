@@ -63,14 +63,25 @@ Business Logic
 
 ### Authentication Flow
 ```
-React Login Page
-    ↓ (POST /api/auth/login)
-FastAPI Auth Service
-    ↓ (JWT generation)
-Token Storage (httpOnly cookies)
-    ↓ (token in Authorization header)
+React Login/Register Pages
+    ↓ (POST /auth/login or /auth/register)
+FastAPI Auth Endpoints
+    ↓ (bcrypt password hashing)
+JWT Generation (python-jose)
+    ↓ (token storage in localStorage - dev, httpOnly cookies - prod)
+Token in Authorization Header (Bearer token)
+    ↓ (authentication dependency)
 Protected Routes
 ```
+
+**Authentication Implementation Details:**
+- **Password Hashing**: bcrypt (not passlib due to compatibility issues)
+- **JWT Library**: python-jose[cryptography]
+- **Token Storage**: localStorage (development), should use httpOnly cookies in production
+- **Token Expiration**: 30 minutes (configurable)
+- **Protected Routes**: FastAPI dependency injection with HTTPBearer
+- **User Ownership**: Projects filtered by user_id, users can only access their own data
+- **Frontend Auth**: AuthContext manages session state, logout, and token persistence
 
 ### Project Ownership
 ```

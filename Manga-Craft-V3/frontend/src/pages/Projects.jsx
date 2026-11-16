@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getProjects, createProject, updateProject, deleteProject } from '../services/projectService';
+import { useAuth } from '../context/AuthContext';
 import ProjectCard from '../components/projects/ProjectCard';
 import ProjectForm from '../components/projects/ProjectForm';
 import DeleteProjectDialog from '../components/projects/DeleteProjectDialog';
@@ -18,6 +19,7 @@ function Projects() {
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid');
+  const { user } = useAuth();
 
   useEffect(() => {
     loadProjects();
@@ -40,10 +42,16 @@ function Projects() {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
+      // Add user_id from authenticated user
+      const projectData = {
+        ...formData,
+        user_id: user.id,
+      };
+      
       if (editingProject) {
-        await updateProject(editingProject._id, formData);
+        await updateProject(editingProject._id, projectData);
       } else {
-        await createProject(formData);
+        await createProject(projectData);
       }
       setShowForm(false);
       setEditingProject(null);

@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Date**: 2026-11-15
-**Current Phase**: V3.6 - Authentication System
-**Overall Progress**: Phase 6 of 20 (25%)
+**Date**: 2026-11-16
+**Current Phase**: V3.7 - User Profile & Settings
+**Overall Progress**: Phase 7 of 20 (30%)
 
 ## Pre-V3 Work Completed
 
@@ -190,18 +190,68 @@
 - **Next Phase**: V3.6 - Authentication System
 - **Unfinished Work**: None
 - **Completion Date**: 2026-11-15
-  - Can create projects from UI
-  - Can list projects from UI
-  - Can edit projects from UI
-  - Can delete projects from UI
-  - Projects persist in MongoDB
-  - Form validation works
-  - Error handling works
-- **Known Limitations**: None
-- **Next Phase**: V3.6 - Authentication & User System
-- **Unfinished Work**: None
 
-### V3.6-V3.20
+### V3.6: Authentication & User System
+- **Status**: [x] Completed
+- **What Was Implemented**:
+  - Backend authentication with bcrypt password hashing
+  - JWT token generation and validation
+  - User registration endpoint (POST /auth/register)
+  - User login endpoint (POST /auth/login)
+  - Current user endpoint (GET /auth/me)
+  - Protected project routes (require authentication)
+  - User ownership enforcement (users can only see their own projects)
+  - Frontend AuthContext for session management
+  - Login page with email/password form
+  - Register page with username/email/password form
+  - Protected routes (redirect to login if not authenticated)
+  - JWT token automatically added to all API requests
+  - Logout functionality in header
+  - Auto-redirect logged-in users from login/register pages
+  - Removed hardcoded user_id from project creation
+- **Files Created**:
+  - `backend/auth/auth_utils.py` - Password hashing, JWT utilities, authentication dependency
+  - `backend/auth/__init__.py` - Auth package initialization
+  - `backend/schemas/auth.py` - Authentication request/response schemas
+  - `backend/schemas/__init__.py` - Schemas package initialization
+  - `backend/api/auth.py` - Authentication endpoints
+  - `frontend/src/services/authService.js` - Auth API calls
+  - `frontend/src/context/AuthContext.jsx` - Auth state management
+  - `frontend/src/pages/Login.jsx` - Login page
+  - `frontend/src/pages/Register.jsx` - Register page
+- **Files Modified**:
+  - `backend/requirements.txt` - Replaced passlib with bcrypt
+  - `backend/main.py` - Added auth router
+  - `backend/api/projects.py` - Protected all routes with authentication, user ownership checks
+  - `frontend/src/services/api.js` - JWT token interceptor, 401 error handling
+  - `frontend/src/main.jsx` - Added AuthProvider wrapper
+  - `frontend/src/App.jsx` - Added protected routes, login/register routes
+  - `frontend/src/pages/Projects.jsx` - Added user_id from authenticated user
+  - `frontend/src/components/projects/ProjectForm.jsx` - Removed hardcoded user_id
+  - `frontend/src/components/layout/Header.jsx` - Added user display, logout button
+  - `frontend/index.html` - Removed favicon
+- **Tests/Verification**:
+  - ✅ User registration works (password hashed)
+  - ✅ User login works (JWT token generated)
+  - ✅ Protected routes reject unauthenticated requests (401)
+  - ✅ Protected routes work with valid JWT token (200)
+  - ✅ Users can only see their own projects
+  - ✅ Frontend login page works
+  - ✅ Frontend register page works
+  - ✅ Frontend logout works
+  - ✅ JWT token stored in localStorage
+  - ✅ JWT token sent with all API requests
+  - ✅ Auto-redirect on 401 errors
+  - ✅ Logged-in users redirected from login/register
+- **Known Limitations**:
+  - JWT secret in code (should move to environment variable)
+  - Tokens stored in localStorage (vulnerable to XSS, should use HttpOnly cookies in production)
+  - Token expiration: 30 minutes (configurable)
+- **Next Phase**: V3.7 - User Profile & Settings
+- **Unfinished Work**: None
+- **Completion Date**: 2026-11-16
+
+### V3.7-V3.20
 - **Status**: [ ] Not Started
 - **Details**: See roadmap.md for complete phase descriptions
 
