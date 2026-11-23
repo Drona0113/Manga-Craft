@@ -138,16 +138,23 @@ This document records important architectural and design decisions made during M
 **Trade-offs**: Less flexible, but provides clear boundaries
 
 ### Memory Architecture
-**Date**: TBD
+**Date**: 2026-11-19
 **Context**: Project memory storage and retrieval
 **Decision**: Structured memory types with RAG enhancement
 **Rationale**:
 - Combines structured storage with semantic search
-- Preserves V2 memory types (character, story, relationship, etc.)
-- RAG provides better retrieval than keyword search
+- Preserves V2 memory types (character, story, relationship, design_decision, art_style, preference, panel, generated_reference, character_reference, other_asset)
+- Added V3-specific types (location, note) for flexibility
+- RAG provides better retrieval than keyword search (V3.14)
 - Flexible for future expansion
 **Alternatives Considered**: Pure structured storage, pure vector search
 **Trade-offs**: More complex than pure structured, but provides better UX
+**Implementation Notes**:
+- 12 memory types total (10 from V2 + 2 V3 additions)
+- MongoDB with indexes on project_id, user_id, type, tags
+- Regex-based search now, vector search in V3.14
+- Project Intelligence panel shows real memory data with limits
+- Libraries.dev animations for UI polish (BorderBeam, ThinkingOrb, MetalFx)
 
 ### Storage Architecture
 **Date**: TBD

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, BookOpen, Users, FileText, Database, Sparkles, MoreHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, BookOpen, Users, FileText, Database, Sparkles, MoreHorizontal, Heart, Palette, Settings, Brain } from 'lucide-react';
+import { memoryService } from '../../services/memoryService';
 
 // Section component for extensibility
 function IntelligenceSection({ id, title, icon: Icon, isExpanded, onToggle, children, actions }) {
@@ -46,11 +47,40 @@ function ProjectIntelligencePanel({ projectId }) {
     context: false,
   });
 
+  const [memories, setMemories] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (projectId) {
+      loadMemories();
+    }
+  }, [projectId]);
+
+  const loadMemories = async () => {
+    try {
+      setLoading(true);
+      const data = await memoryService.listMemories(projectId);
+      setMemories(data.memories);
+    } catch (err) {
+      console.error('Failed to load memories:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  const getMemoriesByType = (type) => {
+    return memories.filter(m => m.type === type);
+  };
+
+  const navigateToMemory = () => {
+    window.location.href = '/memory';
   };
 
   // Sections configuration - easily extensible for future features
@@ -64,8 +94,8 @@ function ProjectIntelligencePanel({ projectId }) {
           <div className="flex items-center gap-3 p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
             <Sparkles className="w-4 h-4 text-[var(--accent)]" />
             <div className="flex-1">
-              <p className="text-sm text-[var(--text-secondary)]">No project details yet.</p>
-              <p className="text-xs text-[var(--accent)] mt-0.5">Details will be added in V3.9</p>
+              <p className="text-sm text-[var(--text-secondary)]">AI-generated project overview</p>
+              <p className="text-xs text-[var(--accent)] mt-0.5">Coming in V3.11 (AI Orchestration)</p>
             </div>
           </div>
         </div>
@@ -77,13 +107,39 @@ function ProjectIntelligencePanel({ projectId }) {
       icon: Users,
       content: (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
-            <Users className="w-4 h-4 text-[var(--text-secondary)]" />
-            <div className="flex-1">
-              <p className="text-sm text-[var(--text-secondary)]">No characters yet.</p>
-              <p className="text-xs text-[var(--accent)] mt-0.5">Manage characters in the Memory section</p>
+          {loading ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
             </div>
-          </div>
+          ) : getMemoriesByType('character').length === 0 ? (
+            <div className="flex items-center gap-3 p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
+              <Users className="w-4 h-4 text-[var(--text-secondary)]" />
+              <div className="flex-1">
+                <p className="text-sm text-[var(--text-secondary)]">No characters yet.</p>
+                <p className="text-xs text-[var(--accent)] mt-0.5">Add in Memory section</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {getMemoriesByType('character').slice(0, 3).map((mem) => (
+                <div key={mem.id} className="p-3 bg-[var(--bg-primary)] rounded-lg border border-[var(--border)]">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{mem.title}</p>
+                  <p className="text-xs text-[var(--text-secondary)] line-clamp-2 mt-1">{mem.content}</p>
+                </div>
+              ))}
+              {getMemoriesByType('character').length > 3 && (
+                <p className="text-xs text-[var(--accent)] text-center py-1">
+                  +{getMemoriesByType('character').length - 3} more
+                </p>
+              )}
+              <button
+                onClick={navigateToMemory}
+                className="w-full text-xs text-[var(--accent)] hover:text-[var(--accent)]/80 text-center py-2"
+              >
+                View All in Memory →
+              </button>
+            </div>
+          )}
         </div>
       ),
     },
@@ -93,13 +149,39 @@ function ProjectIntelligencePanel({ projectId }) {
       icon: FileText,
       content: (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
-            <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
-            <div className="flex-1">
-              <p className="text-sm text-[var(--text-secondary)]">No story details yet.</p>
-              <p className="text-xs text-[var(--accent)] mt-0.5">Add story elements in the Memory section</p>
+          {loading ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
             </div>
-          </div>
+          ) : getMemoriesByType('story').length === 0 ? (
+            <div className="flex items-center gap-3 p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
+              <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
+              <div className="flex-1">
+                <p className="text-sm text-[var(--text-secondary)]">No story details yet.</p>
+                <p className="text-xs text-[var(--accent)] mt-0.5">Add in Memory section</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {getMemoriesByType('story').slice(0, 3).map((mem) => (
+                <div key={mem.id} className="p-3 bg-[var(--bg-primary)] rounded-lg border border-[var(--border)]">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{mem.title}</p>
+                  <p className="text-xs text-[var(--text-secondary)] line-clamp-2 mt-1">{mem.content}</p>
+                </div>
+              ))}
+              {getMemoriesByType('story').length > 3 && (
+                <p className="text-xs text-[var(--accent)] text-center py-1">
+                  +{getMemoriesByType('story').length - 3} more
+                </p>
+              )}
+              <button
+                onClick={navigateToMemory}
+                className="w-full text-xs text-[var(--accent)] hover:text-[var(--accent)]/80 text-center py-2"
+              >
+                View All in Memory →
+              </button>
+            </div>
+          )}
         </div>
       ),
     },
@@ -110,21 +192,51 @@ function ProjectIntelligencePanel({ projectId }) {
       content: (
         <div className="space-y-3">
           <div className="p-3 bg-[var(--bg-primary)] rounded-lg border border-dashed border-[var(--border)]">
-            <p className="text-sm text-[var(--text-secondary)] mb-2">No context available yet.</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-2">Memory: {memories.length} items</p>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
-                <span className="text-xs text-[var(--text-secondary)]">References</span>
-                <span className="text-xs font-medium text-[var(--accent)]">0 items</span>
+                <span className="text-xs text-[var(--text-secondary)]">Characters</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('character').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Story</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('story').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Relationships</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('relationship').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Design Decisions</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('design_decision').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Art Style</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('art_style').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Preferences</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('preference').length}</span>
               </div>
               <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
                 <span className="text-xs text-[var(--text-secondary)]">Panels</span>
-                <span className="text-xs font-medium text-[var(--accent)]">0 items</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('panel').length}</span>
               </div>
               <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
-                <span className="text-xs text-[var(--text-secondary)]">Memory</span>
-                <span className="text-xs font-medium text-[var(--accent)]">0 items</span>
+                <span className="text-xs text-[var(--text-secondary)]">Locations</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('location').length}</span>
+              </div>
+              <div className="flex items-center justify-between p-1.5 bg-[var(--bg-surface)] rounded">
+                <span className="text-xs text-[var(--text-secondary)]">Notes</span>
+                <span className="text-xs font-medium text-[var(--accent)]">{getMemoriesByType('note').length}</span>
               </div>
             </div>
+            <button
+              onClick={navigateToMemory}
+              className="w-full text-xs text-[var(--accent)] hover:text-[var(--accent)]/80 text-center py-2 mt-3"
+            >
+              View All in Memory →
+            </button>
           </div>
         </div>
       ),
@@ -141,7 +253,7 @@ function ProjectIntelligencePanel({ projectId }) {
         </h3>
       </div>
 
-      {/* Sections - Custom scrollbar */}
+      {/* Sections */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {sections.map((section) => (
           <IntelligenceSection

@@ -9,7 +9,7 @@ function Sidebar({ mobileOpen, onClose }) {
       { path: '/projects', label: 'Projects', active: location.pathname === '/projects' },
     ]},
     { section: 'Library', items: [
-      { path: '/memory', label: 'Memory', disabled: true },
+      { path: '/memory', label: 'Memory', active: location.pathname === '/memory' },
       { path: '/panels', label: 'Panels', disabled: true },
       { path: '/references', label: 'References', disabled: true },
     ]},

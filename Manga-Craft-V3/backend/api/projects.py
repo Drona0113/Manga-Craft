@@ -4,7 +4,7 @@ Basic CRUD operations for projects
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from models import Project, User, Conversation, Message
+from models import Project, User, Conversation, Message, ProjectMemory
 from typing import List
 from datetime import datetime
 import logging
@@ -76,6 +76,9 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
         # Get all conversations for this project
         conversations = await Conversation.find({"project_id": project_id}).to_list()
         
+        # Get all memories for this project
+        memories = await ProjectMemory.find({"project_id": project_id}).to_list()
+        
         total_messages_deleted = 0
         successful_conversation_ids = []
         failed_deletions = []
@@ -93,6 +96,14 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
                     "conversation_id": str(conv.id),
                     "error": str(e)
                 })
+        
+        # Delete all memories
+        for mem in memories:
+            try:
+                await mem.delete()
+            except Exception as e:
+                # Log memory deletion failure but don't block project deletion
+                logger.warning(f"Failed to delete memory {mem.id}: {str(e)}")
         
         # If any deletions failed, do NOT delete the project
         if failed_deletions:
@@ -114,7 +125,8 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
         return {
             "message": "Project deleted",
             "conversations_deleted": len(conversations),
-            "messages_deleted": total_messages_deleted
+            "messages_deleted": total_messages_deleted,
+            "memories_deleted": len(memories)
         }
         
     except HTTPException:

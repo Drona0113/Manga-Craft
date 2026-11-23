@@ -7,17 +7,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from config.database import Database
-from models import User, Project, Conversation, Message
+from models import User, Project, Conversation, Message, ProjectMemory
 from api import projects_router
 from api.auth import router as auth_router
 from api.conversations import router as conversations_router
+from api.memories import router as memories_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     await Database.connect()
-    await Database.init_models([User, Project, Conversation, Message])
+    await Database.init_models([User, Project, Conversation, Message, ProjectMemory])
     yield
     # Shutdown
     await Database.close()
@@ -42,6 +43,7 @@ app.add_middleware(
 app.include_router(projects_router)
 app.include_router(auth_router)
 app.include_router(conversations_router)
+app.include_router(memories_router)
 
 
 @app.get("/")
