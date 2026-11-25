@@ -10,7 +10,6 @@ function Sidebar({ mobileOpen, onClose }) {
     ]},
     { section: 'Library', items: [
       { path: '/memory', label: 'Memory', active: location.pathname === '/memory' },
-      { path: '/panels', label: 'Panels', disabled: true },
       { path: '/references', label: 'References', disabled: true },
     ]},
     { section: 'General', items: [

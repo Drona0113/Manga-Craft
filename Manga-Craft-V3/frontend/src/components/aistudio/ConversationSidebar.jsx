@@ -71,13 +71,18 @@ function ConversationSidebar({ projectId, onConversationSelect, activeConversati
   return (
     <div className="flex flex-col h-full bg-[var(--bg-surface)]">
       {/* Header */}
-      <div className="p-5 border-b border-[var(--border)]">
+      <div className="px-3 py-2.5 border-b border-[var(--border)]">
+        <h3 className="text-xs font-semibold text-[var(--text-primary)]">Conversations</h3>
+      </div>
+
+      {/* New Conversation */}
+      <div className="p-3 border-b border-[var(--border)]">
         <button
           onClick={handleCreateConversation}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[var(--accent)] to-[var(--accent)]/80 text-white rounded-xl hover:shadow-lg hover:shadow-[var(--accent)]/20 transition-all duration-200 font-medium"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent)]/80 transition-colors text-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>New Conversation</span>
+          <span>New</span>
         </button>
       </div>
 

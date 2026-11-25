@@ -5,20 +5,22 @@ Main application entry point
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from config.database import Database
-from models import User, Project, Conversation, Message, ProjectMemory
+from models import User, Project, Conversation, Message, ProjectMemory, Panel
 from api import projects_router
 from api.auth import router as auth_router
 from api.conversations import router as conversations_router
 from api.memories import router as memories_router
+from api.panels import router as panels_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     await Database.connect()
-    await Database.init_models([User, Project, Conversation, Message, ProjectMemory])
+    await Database.init_models([User, Project, Conversation, Message, ProjectMemory, Panel])
     yield
     # Shutdown
     await Database.close()
@@ -44,6 +46,10 @@ app.include_router(projects_router)
 app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(memories_router)
+app.include_router(panels_router)
+
+# Static file serving for panel images
+app.mount("/panels", StaticFiles(directory="panels"), name="panels")
 
 
 @app.get("/")

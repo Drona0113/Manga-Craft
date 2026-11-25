@@ -35,8 +35,10 @@ function ChatWorkspace({ projectId, conversationId }) {
     }
   };
 
-  const handleSendMessage = async (content) => {
+  const handleSendMessage = async (content, attachment = null) => {
     try {
+      // For now, attachment is just passed along
+      // V3.11 will handle actual file upload and AI attachment processing
       await conversationService.createMessage(conversationId, content);
       // Trigger message list refresh
       setMessageRefreshKey(prev => prev + 1);
@@ -117,9 +119,7 @@ function ChatWorkspace({ projectId, conversationId }) {
       </div>
 
       {/* Message Composer */}
-      <div className="p-6 border-t border-[var(--border)] bg-[var(--bg-surface)]">
-        <MessageComposer onSendMessage={handleSendMessage} />
-      </div>
+      <MessageComposer onSendMessage={handleSendMessage} />
     </div>
   );
 }

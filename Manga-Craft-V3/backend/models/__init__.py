@@ -7,5 +7,6 @@ from .project import Project
 from .conversation import Conversation
 from .message import Message
 from .memory import ProjectMemory
+from .panel import Panel
 
-__all__ = ["User", "Project", "Conversation", "Message", "ProjectMemory"]
+__all__ = ["User", "Project", "Conversation", "Message", "ProjectMemory", "Panel"]

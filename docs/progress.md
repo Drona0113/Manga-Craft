@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Date**: 2026-11-19
-**Current Phase**: V3.10 - Panel Management Migration
-**Overall Progress**: Phase 10 of 20 (45%)
+**Date**: 2026-11-25
+**Current Phase**: V3.11 - AI Orchestration Layer
+**Overall Progress**: Phase 10 of 20 (50%)
 
 ## Pre-V3 Work Completed
 
@@ -406,7 +406,56 @@
 - **Unfinished Work**: None
 - **Completion Date**: 2026-11-19
 
-### V3.10-V3.20
+### V3.10: Panel Management Migration
+- **Status**: [x] Completed
+- **What Was Implemented**:
+  - Panel model in MongoDB with indexes (project_id, user_id, created_at)
+  - Panel metadata: file_path, file_name, file_size, file_type, width, height, notes
+  - Panel endpoints: upload, list (paginated), get single, patch (notes), delete
+  - File validation on upload: max size 10MB, allowed types (JPEG/PNG/WebP), max dimension 8000px
+  - Image dimension reading via Pillow (validates real image, rejects corrupt/non-image files)
+  - Local file storage under `panels/{project_id}/` with unique timestamped filenames
+  - Cascade deletion (panels -> project)
+  - Authentication and ownership validation on all endpoints
+  - Frontend panelService (upload, list, get, delete, updatePanel)
+  - PanelsWorkspace inside AI Studio with three view modes (grid, storyboard, list)
+  - Drag & drop and multi-file upload with client-side size preview
+  - Storyboard scene notes with persistence (saved on blur via PATCH)
+  - Consolidated panel UI into AI Studio; removed standalone /panels page
+- **Files Created**:
+  - `backend/models/panel.py` - Panel model with indexes
+  - `backend/schemas/panel.py` - Panel request/response schemas + PanelUpdate
+  - `backend/api/panels.py` - Panel upload/list/get/patch/delete endpoints
+  - `frontend/src/services/panelService.js` - Panel API calls
+- **Files Modified**:
+  - `backend/models/__init__.py` - Export Panel model
+  - `backend/main.py` - Register panels router, init Panel model, mount /panels static files
+  - `backend/api/projects.py` - Add cascade deletion for panels
+  - `backend/requirements.txt` - Add Pillow for image dimension validation
+  - `frontend/src/components/aistudio/AdaptiveLayout.jsx` - Full PanelsWorkspace (views, upload, notes)
+  - `frontend/src/App.jsx` - Remove standalone /panels route
+- **Tests/Verification**:
+  - ✅ Upload JPEG/PNG/WebP works
+  - ✅ Invalid/non-image file rejected with 400
+  - ✅ File over 10MB rejected with 400
+  - ✅ Image over 8000px rejected with 400
+  - ✅ Panel listing with pagination
+  - ✅ Panel get single by ID
+  - ✅ Panel delete removes file and record
+  - ✅ Scene notes persist via PATCH (/panels/{id})
+  - ✅ Grid/storyboard/list views work
+  - ✅ Drag & drop multi-file upload works
+  - ✅ Project ownership enforcement
+  - ✅ Cascade deletion (project delete -> panels deleted)
+- **Known Limitations**:
+  - Local file storage only (object storage migration in V3.16)
+  - No AI panel analysis (V3.13)
+  - No panel selection feeding AI context (V3.12)
+- **Next Phase**: V3.11 - AI Orchestration Layer
+- **Unfinished Work**: None
+- **Completion Date**: 2026-11-25
+
+### V3.11-V3.20
 - **Status**: [ ] Not Started
 - **Details**: See roadmap.md for complete phase descriptions
 

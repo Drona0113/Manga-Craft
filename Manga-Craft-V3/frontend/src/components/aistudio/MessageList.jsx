@@ -76,7 +76,7 @@ function MessageList({ conversationId, refreshKey }) {
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -85,13 +85,13 @@ function MessageList({ conversationId, refreshKey }) {
 
       {/* Load More Button */}
       {hasMore && (
-        <div className="flex justify-center p-4">
+        <div className="flex justify-center p-3 border-t border-[var(--border)]">
           <button
             onClick={handleLoadMore}
             disabled={loading}
-            className="px-6 py-2.5 bg-[var(--bg-card)] text-[var(--text-primary)] rounded-xl hover:bg-[var(--bg-surface)] border border-[var(--border)] hover:border-[var(--accent)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="px-4 py-1.5 text-sm bg-[var(--bg-card)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-surface)] border border-[var(--border)] transition-colors disabled:opacity-50"
           >
-            {loading ? 'Loading...' : 'Load older messages'}
+            {loading ? 'Loading...' : 'Load older'}
           </button>
         </div>
       )}

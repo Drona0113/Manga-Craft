@@ -5,6 +5,7 @@ Schemas Package
 from .auth import UserRegister, UserLogin, Token, UserResponse
 from .conversation import ConversationCreate, ConversationUpdate, ConversationResponse, MessageCreate, MessageResponse, MessagesListResponse
 from .memory import MemoryCreate, MemoryUpdate, MemoryResponse, MemoryListResponse
+from .panel import PanelCreate, PanelResponse, PanelListResponse
 
 __all__ = [
     "UserRegister",
@@ -20,5 +21,8 @@ __all__ = [
     "MemoryCreate",
     "MemoryUpdate",
     "MemoryResponse",
-    "MemoryListResponse"
+    "MemoryListResponse",
+    "PanelCreate",
+    "PanelResponse",
+    "PanelListResponse"
 ]

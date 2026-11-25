@@ -4,7 +4,7 @@ Basic CRUD operations for projects
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from models import Project, User, Conversation, Message, ProjectMemory
+from models import Project, User, Conversation, Message, ProjectMemory, Panel
 from typing import List
 from datetime import datetime
 import logging
@@ -105,6 +105,24 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
                 # Log memory deletion failure but don't block project deletion
                 logger.warning(f"Failed to delete memory {mem.id}: {str(e)}")
         
+        # Delete all panels
+        panels = await Panel.find({"project_id": project_id}).to_list()
+        for panel in panels:
+            try:
+                # Delete file from disk
+                from pathlib import Path
+                file_path = Path(panel.file_path)
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                    except Exception as e:
+                        logger.warning(f"Failed to delete panel file {file_path}: {str(e)}")
+                # Delete database record
+                await panel.delete()
+            except Exception as e:
+                # Log panel deletion failure but don't block project deletion
+                logger.warning(f"Failed to delete panel {panel.id}: {str(e)}")
+        
         # If any deletions failed, do NOT delete the project
         if failed_deletions:
             raise HTTPException(
@@ -126,7 +144,8 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
             "message": "Project deleted",
             "conversations_deleted": len(conversations),
             "messages_deleted": total_messages_deleted,
-            "memories_deleted": len(memories)
+            "memories_deleted": len(memories),
+            "panels_deleted": len(panels)
         }
         
     except HTTPException:
