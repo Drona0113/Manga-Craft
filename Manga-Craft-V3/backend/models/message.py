@@ -4,7 +4,7 @@ Represents an individual message in a conversation
 """
 
 from beanie import Document, Indexed
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from pydantic import Field
 
@@ -15,7 +15,7 @@ class Message(Document):
     conversation_id: str = Indexed()  # Foreign key to Conversation
     role: str                          # "user" or "assistant"
     content: str                       # Message content
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Future extensibility (NOT implementing in V3.8):
     # attachments: List[str] = None  # File paths

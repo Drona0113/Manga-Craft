@@ -3,8 +3,8 @@
 ## Current Status
 
 **Date**: 2026-11-25
-**Current Phase**: V3.11 - AI Orchestration Layer
-**Overall Progress**: Phase 10 of 20 (50%)
+**Current Phase**: V3.11 - AI Orchestration Layer (M1 complete, M2 streaming pending)
+**Overall Progress**: Phase 11 of 20 (55%)
 
 ## Pre-V3 Work Completed
 
@@ -455,7 +455,51 @@
 - **Unfinished Work**: None
 - **Completion Date**: 2026-11-25
 
-### V3.11-V3.20
+### V3.11: AI Orchestration Layer (M1: Non-Streaming Chat)
+- **Status**: [~] In Progress (M1 complete, M2 streaming pending)
+- **What Was Implemented**:
+  - AI service (`services/ai_service.py`) calling OpenRouter via the OpenAI-compatible SDK
+  - Model fallback chain (primary `google/gemini-2.5-flash-lite` -> fallback `google/gemini-2.5-flash`) to survive provider 429 rate limits
+  - Context builder (`services/context_builder.py`): assembles project name, description, Project Memory (all types), and panel metadata into a system-prompt briefing
+  - Chat endpoint (`api/chat.py`, `POST /chat/`): saves the user message, builds context, generates a reply, saves and returns the assistant message
+  - Bounded context window: only the most recent 20 messages (working memory) are sent; older messages remain in the DB
+  - Graceful failure: AI errors return 502 and the user message is preserved
+  - Timestamp fix: timezone-aware UTC storage; legacy naive timestamps normalized to UTC in API responses; browser renders local time
+  - Frontend: `conversationService.sendChatMessage`; chat now displays real AI replies
+  - Chat UI date grouping (Today / Yesterday / date headings); conversation list shows "Today, time" / "Yesterday"
+- **Files Created**:
+  - `backend/services/__init__.py`
+  - `backend/services/ai_service.py` - OpenRouter client + model fallback chain
+  - `backend/services/context_builder.py` - project context briefing
+  - `backend/schemas/chat.py` - ChatRequest / ChatResponse
+  - `backend/api/chat.py` - POST /chat/ endpoint
+- **Files Modified**:
+  - `backend/main.py` - register chat router
+  - `backend/models/message.py` - timezone-aware created_at
+  - `backend/models/conversation.py` - timezone-aware created_at / updated_at
+  - `backend/api/conversations.py` - to_utc_iso() serialization; UTC-aware updates
+  - `frontend/src/services/conversationService.js` - sendChatMessage
+  - `frontend/src/components/aistudio/ChatWorkspace.jsx` - send via AI endpoint
+  - `frontend/src/components/aistudio/MessageList.jsx` - date group headings
+  - `frontend/src/components/aistudio/ConversationSidebar.jsx` - Today/Yesterday labels
+  - `backend/.env` - OPENROUTER_MODEL
+- **Tests/Verification**:
+  - ✅ Sending a message returns a real AI reply
+  - ✅ Reply reflects actual Project Memory (context builder works)
+  - ✅ Rate-limited primary model falls back to secondary without user-visible failure
+  - ✅ AI failure returns 502 and preserves the user message
+  - ✅ Timestamps display in the viewer's local timezone
+  - ✅ Messages group under Today / Yesterday / date headings
+- **Known Limitations**:
+  - Context limit is message-count based (20), not token-counted
+  - Full Project Memory is injected (no relevance filtering yet -> RAG in V3.14)
+  - No streaming yet (M2)
+  - No AI tool calling yet (V3.12)
+- **Next Phase**: V3.11 M2 - Streaming responses
+- **Unfinished Work**: Streaming (M2)
+- **Completion Date**: -
+
+### V3.12-V3.20
 - **Status**: [ ] Not Started
 - **Details**: See roadmap.md for complete phase descriptions
 

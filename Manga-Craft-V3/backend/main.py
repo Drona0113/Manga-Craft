@@ -14,6 +14,7 @@ from api.auth import router as auth_router
 from api.conversations import router as conversations_router
 from api.memories import router as memories_router
 from api.panels import router as panels_router
+from api.chat import router as chat_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +48,7 @@ app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(memories_router)
 app.include_router(panels_router)
+app.include_router(chat_router)
 
 # Static file serving for panel images
 app.mount("/panels", StaticFiles(directory="panels"), name="panels")

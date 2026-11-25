@@ -35,11 +35,11 @@ function ChatWorkspace({ projectId, conversationId }) {
     }
   };
 
-  const handleSendMessage = async (content, attachment = null) => {
+  const handleSendMessage = async (content) => {
     try {
-      // For now, attachment is just passed along
-      // V3.11 will handle actual file upload and AI attachment processing
-      await conversationService.createMessage(conversationId, content);
+      // Send through the AI endpoint: it saves the user message,
+      // generates an AI reply, saves it, and returns both.
+      await conversationService.sendChatMessage(conversationId, content);
       // Trigger message list refresh
       setMessageRefreshKey(prev => prev + 1);
     } catch (err) {

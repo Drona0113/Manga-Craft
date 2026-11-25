@@ -5,7 +5,7 @@ Handles conversation and message CRUD operations
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from models import Project, Conversation, Message, User
 from schemas.conversation import (
@@ -21,6 +21,16 @@ from auth.auth_utils import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
+
+
+def to_utc_iso(value: datetime) -> str:
+    """Return an ISO timestamp that browsers can safely interpret as UTC."""
+    if value.tzinfo is None:
+        # Existing MongoDB dates are naive but were created as UTC.
+        value = value.replace(tzinfo=timezone.utc)
+    else:
+        value = value.astimezone(timezone.utc)
+    return value.isoformat().replace("+00:00", "Z")
 
 
 @router.post("/", response_model=ConversationResponse, status_code=201)
@@ -54,8 +64,8 @@ async def create_conversation(
         project_id=new_conversation.project_id,
         user_id=new_conversation.user_id,
         title=new_conversation.title,
-        created_at=new_conversation.created_at.isoformat(),
-        updated_at=new_conversation.updated_at.isoformat()
+        created_at=to_utc_iso(new_conversation.created_at),
+        updated_at=to_utc_iso(new_conversation.updated_at)
     )
 
 
@@ -86,8 +96,8 @@ async def list_conversations(
             project_id=conv.project_id,
             user_id=conv.user_id,
             title=conv.title,
-            created_at=conv.created_at.isoformat(),
-            updated_at=conv.updated_at.isoformat()
+            created_at=to_utc_iso(conv.created_at),
+            updated_at=to_utc_iso(conv.updated_at)
         )
         for conv in conversations
     ]
@@ -113,8 +123,8 @@ async def get_conversation(
         project_id=conversation.project_id,
         user_id=conversation.user_id,
         title=conversation.title,
-        created_at=conversation.created_at.isoformat(),
-        updated_at=conversation.updated_at.isoformat()
+        created_at=to_utc_iso(conversation.created_at),
+        updated_at=to_utc_iso(conversation.updated_at)
     )
 
 
@@ -136,7 +146,7 @@ async def update_conversation(
         raise HTTPException(status_code=403, detail="Not authorized to access this conversation")
     
     conversation.title = conversation_data.title
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = datetime.now(timezone.utc)
     await conversation.save()
     
     return ConversationResponse(
@@ -241,7 +251,7 @@ async def get_messages(
                 conversation_id=msg.conversation_id,
                 role=msg.role,
                 content=msg.content,
-                created_at=msg.created_at.isoformat()
+                created_at=to_utc_iso(msg.created_at)
             )
             for msg in messages
         ],
@@ -278,8 +288,8 @@ async def create_message(
     
     await new_message.insert()
     
-    # Update conversation.updated_at
-    conversation.updated_at = datetime.utcnow()
+    # Update conversation.updated_at in UTC
+    conversation.updated_at = datetime.now(timezone.utc)
     await conversation.save()
     
     return MessageResponse(
@@ -287,7 +297,7 @@ async def create_message(
         conversation_id=new_message.conversation_id,
         role=new_message.role,
         content=new_message.content,
-        created_at=new_message.created_at.isoformat()
+        created_at=to_utc_iso(new_message.created_at)
     )
 
 
@@ -307,7 +317,7 @@ async def create_assistant_message_internal(conversation_id: str, content: str):
     )
     await new_message.insert()
     
-    conversation.updated_at = datetime.utcnow()
+    conversation.updated_at = datetime.now(timezone.utc)
     await conversation.save()
     
     return new_message

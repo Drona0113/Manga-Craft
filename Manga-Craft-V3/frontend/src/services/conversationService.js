@@ -50,4 +50,13 @@ export const conversationService = {
     });
     return response.data;
   },
+
+  // Send a message and receive an AI reply
+  sendChatMessage: async (conversationId, content) => {
+    const response = await api.post('/chat/', {
+      conversation_id: conversationId,
+      content,
+    });
+    return response.data;
+  },
 };

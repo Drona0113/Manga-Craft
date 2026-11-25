@@ -59,12 +59,19 @@ function ConversationSidebar({ projectId, onConversationSelect, activeConversati
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    const isSameLocalDay = (first, second) =>
+      first.getFullYear() === second.getFullYear() &&
+      first.getMonth() === second.getMonth() &&
+      first.getDate() === second.getDate();
+
+    if (isSameLocalDay(date, today)) {
+      return `Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    if (isSameLocalDay(date, yesterday)) return 'Yesterday';
     return date.toLocaleDateString();
   };
 

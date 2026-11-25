@@ -48,6 +48,27 @@ function MessageList({ conversationId, refreshKey }) {
     loadMessages(messages.length);
   };
 
+  const getLocalDateKey = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  };
+
+  const formatDateHeading = (dateString) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (getLocalDateKey(dateString) === getLocalDateKey(today.toISOString())) return 'Today';
+    if (getLocalDateKey(dateString) === getLocalDateKey(yesterday.toISOString())) return 'Yesterday';
+
+    return date.toLocaleDateString(undefined, {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   if (loading && messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -77,9 +98,23 @@ function MessageList({ conversationId, refreshKey }) {
     <div className="flex flex-col h-full">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
+        {messages.map((message, index) => {
+          const isFirstMessageOfDay = index === 0 ||
+            getLocalDateKey(message.created_at) !== getLocalDateKey(messages[index - 1].created_at);
+
+          return (
+            <div key={message.id}>
+              {isFirstMessageOfDay && (
+                <div className="flex justify-center py-3">
+                  <span className="px-3 py-1 text-xs text-[var(--text-secondary)] bg-[var(--bg-card)] rounded-full">
+                    {formatDateHeading(message.created_at)}
+                  </span>
+                </div>
+              )}
+              <MessageBubble message={message} />
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
