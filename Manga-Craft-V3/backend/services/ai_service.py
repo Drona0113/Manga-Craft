@@ -73,3 +73,40 @@ async def generate_reply(messages: list, models: list = None) -> str:
             last_error = error
 
     raise last_error or RuntimeError("All models failed to respond")
+
+
+async def stream_reply(messages: list, models: list = None):
+    """
+    Stream a reply token by token.
+
+    This is an async generator: instead of returning one string, it `yield`s
+    small pieces of text as the AI produces them. The caller loops over it:
+        async for token in stream_reply(messages):
+            ...
+
+    Falls back to the next model only if a model fails before streaming starts.
+    """
+    client = get_client()
+    model_chain = models or get_model_chain()
+    last_error = None
+
+    for model in model_chain:
+        try:
+            stream = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.7,
+                stream=True,
+            )
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                piece = chunk.choices[0].delta.content
+                if piece:
+                    yield piece
+            return
+        except Exception as error:
+            logger.warning("Streaming model %s failed, trying next: %s", model, error)
+            last_error = error
+
+    raise last_error or RuntimeError("All models failed to respond")
