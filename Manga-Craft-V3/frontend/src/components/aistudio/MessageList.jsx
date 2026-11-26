@@ -4,17 +4,17 @@ import MessageBubble from './MessageBubble';
 import Loading from '../common/Loading';
 import { MessageSquare } from 'lucide-react';
 
-function MessageList({ conversationId, refreshKey }) {
+function MessageList({ conversationId, refreshKey, streamingContent = '', isStreaming = false }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll as messages arrive AND as the streaming reply grows
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingContent, isStreaming]);
 
   useEffect(() => {
     loadMessages();
@@ -80,7 +80,7 @@ function MessageList({ conversationId, refreshKey }) {
     );
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !streamingContent && !isStreaming) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent)]/20 to-[var(--accent)]/5 flex items-center justify-center mb-4">
@@ -115,6 +115,28 @@ function MessageList({ conversationId, refreshKey }) {
             </div>
           );
         })}
+        {isStreaming && !streamingContent && (
+          <div className="flex justify-start">
+            <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl px-4 py-3">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-[var(--text-secondary)] animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
+        )}
+        {streamingContent && (
+          <MessageBubble
+            message={{
+              id: 'streaming',
+              role: 'assistant',
+              content: streamingContent,
+              created_at: new Date().toISOString(),
+            }}
+            isStreaming={isStreaming}
+          />
+        )}
         <div ref={messagesEndRef} />
       </div>
 

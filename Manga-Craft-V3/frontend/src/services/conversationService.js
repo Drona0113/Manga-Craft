@@ -59,4 +59,50 @@ export const conversationService = {
     });
     return response.data;
   },
+
+  // Stream an AI reply using Server-Sent Events (SSE).
+  // Unlike axios, fetch lets us read the response body piece by piece.
+  streamChatMessage: async (conversationId, content, handlers = {}) => {
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${baseURL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ conversation_id: conversationId, content }),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error('Failed to start the stream');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    // Read chunks until the server closes the stream.
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE events are separated by a blank line.
+      const events = buffer.split('\n\n');
+      buffer = events.pop();
+
+      for (const event of events) {
+        const line = event.trim();
+        if (!line.startsWith('data:')) continue;
+        const data = JSON.parse(line.slice(5).trim());
+
+        if (data.type === 'start' && handlers.onStart) handlers.onStart(data);
+        else if (data.type === 'token' && handlers.onToken) handlers.onToken(data.content);
+        else if (data.type === 'done' && handlers.onDone) handlers.onDone(data);
+        else if (data.type === 'error' && handlers.onError) handlers.onError(data.message);
+      }
+    }
+  },
 };

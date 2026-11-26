@@ -122,13 +122,13 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 ### Milestone 3: AI & Intelligence (V3.11–V3.15)
 
 #### V3.11: AI Orchestration Layer
-- [~] In Progress (M1 complete: non-streaming chat; M2 streaming pending)
+- [x] Completed (M1 non-streaming + M2 streaming)
 - **Goal**: Create the AI orchestration service that manages LLM interactions, context building, and tool routing
 - **Technologies**: AI service layer, Context builder, OpenRouter integration via OpenAI-compatible SDK, model fallback chain
-- **What is Implemented**: AI service with model fallback, context builder (project + memory + panels briefing), POST /chat/ endpoint, bounded recent-message window, UTC-aware timestamps, chat date grouping
+- **What is Implemented**: AI service with model fallback, context builder (project + memory + panels briefing), POST /chat/ and POST /chat/stream (SSE) endpoints, bounded recent-message window, UTC-aware timestamps, chat date grouping, typewriter streaming UI with typing indicator + caret and auto-scroll
 - **V2 Functionality Preserved**: V2 AI interactions still work
-- **Tests/Success Criteria**: Can send message to AI, AI responds, context includes Project Memory; streaming pending (M2)
-- **Must Complete Before V3.12**: Streaming verified, context builder tested
+- **Tests/Success Criteria**: ✅ AI responds with streaming; context includes Project Memory
+- **Must Complete Before V3.12**: Complete — streaming verified, context builder tested
 
 #### V3.12: Tool Calling System Migration
 - [ ] Not Started

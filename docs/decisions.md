@@ -192,6 +192,42 @@ This document records important architectural and design decisions made during M
 **Alternatives Considered**: Manual deployment (error-prone), Kubernetes (overkill for current scale)
 **Trade-offs**: Docker learning curve, but valuable skill
 
+## AI Orchestration Decisions (V3.11)
+
+### Why Server-Sent Events (SSE) for chat streaming
+**Date**: 2026-11-26
+**Context**: V3.11 M2 needed to stream AI replies token-by-token
+**Decision**: Use Server-Sent Events (`text/event-stream`) via FastAPI `StreamingResponse`
+**Rationale**:
+- One-way server-to-client stream fits chat perfectly
+- Works over plain HTTP (no WebSocket handshake or extra state)
+- The browser reads it with a plain `fetch` + `ReadableStream` reader
+- Simple, beginner-friendly, and easy to debug (each event is a `data:` line)
+**Alternatives Considered**: WebSockets (bidirectional, heavier than needed), polling (wasteful, not live)
+**Trade-offs**: One-way only; fine because the client sends the request up front
+
+### Why a client-side typewriter reveal was added
+**Date**: 2026-11-26
+**Context**: Fast models return short replies in one network chunk, so tokens were batched into a single React paint and streaming looked invisible
+**Decision**: Keep a `target` buffer (received text) and a `displayed` buffer (shown text); reveal a few characters per frame until they match
+**Rationale**:
+- Makes streaming visible even when the whole reply arrives instantly
+- Does NOT slow the server or the model; only paces the reveal in the browser
+- Produces the familiar ChatGPT-style typing effect
+**Alternatives Considered**: Artificial server delay (dishonest, wastes time), no reveal (streaming invisible on fast replies)
+**Trade-offs**: Slight added frontend complexity; tuned to stay snappy (~15 frames to catch up)
+
+### Why panel/image analysis is deferred to V3.12–V3.13
+**Date**: 2026-11-26
+**Context**: Asking the AI to "analyze the panel" fails: the AI only receives panel metadata, not the image
+**Decision**: Do not attempt image analysis in V3.11
+**Rationale**:
+- `context_builder` sends filename, dimensions, and notes only (no pixels)
+- Panel analysis needs a tool the AI can call (V3.12 Tool Calling System Migration) and vision input (V3.13 Multimodal Panel Analysis)
+- Doing it now would require passing image bytes into the prompt without tool/vision support
+**Alternatives Considered**: Inline base64 images in the prompt now (premature; no tool or vision workflow)
+**Trade-offs**: Until V3.12–V3.13, the AI can only reason about panels it is told about in text
+
 ## Design Decisions
 
 ### Project Data Model

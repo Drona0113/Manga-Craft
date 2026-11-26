@@ -95,7 +95,25 @@ Projects
 └── Generated References
 ```
 
-### AI Orchestration
+### AI Orchestration (V3.11 — implemented)
+```
+React ChatWorkspace
+    ↓ POST /chat/stream  (JSON body)
+FastAPI api/chat.py
+    ↓ 1. save user message
+    ↓ 2. services/context_builder.py -> project briefing
+    ↓ 3. load recent messages (working memory)
+    ↓ 4. services/ai_service.py -> OpenRouter (stream=True)
+    ↓ StreamingResponse (text/event-stream)
+React reads tokens via fetch + ReadableStream
+    ↓ typewriter reveal -> live bubble + auto-scroll
+Server accumulates tokens -> saves full assistant message on completion
+```
+- Two endpoints share the same context logic: `POST /chat/` (non-streaming) and `POST /chat/stream` (SSE streaming)
+- Model fallback chain: `gemini-2.5-flash-lite` → `gemini-2.5-flash` on provider errors (e.g. 429)
+- Context = SYSTEM_PROMPT + project briefing + most recent 20 messages
+
+### AI Orchestration (planned before V3.11)
 ```
 React Chat Interface
     ↓ (POST /api/ai/chat)
@@ -149,7 +167,19 @@ AdaptiveLayout (Three-Panel)
 - Placeholder content in V3.8, real data in V3.9+
 - Flexible for future features (world building, locations, themes, etc.)
 
-### Data Flow for AI Requests
+### Data Flow for AI Requests (streaming, V3.11)
+```
+User types -> MessageComposer
+    ↓ onSendMessage
+ChatWorkspace.handleSendMessage
+    ↓ conversationService.streamChatMessage (fetch, reads SSE)
+    ├── event:start -> refresh list (user message appears)
+    ├── event:token -> append to target buffer (typewriter reveal)
+    ├── event:done  -> reply already saved; refresh and swap in saved message
+    └── event:error -> show error, keep user message
+```
+
+### Data Flow for AI Requests (non-streaming, V3.11 M1)
 ```
 User Message
     ↓

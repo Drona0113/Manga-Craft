@@ -11,6 +11,10 @@ function ChatWorkspace({ projectId, conversationId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [messageRefreshKey, setMessageRefreshKey] = useState(0);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [displayedContent, setDisplayedContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isStreamFinal, setIsStreamFinal] = useState(false);
 
   useEffect(() => {
     if (conversationId) {
@@ -36,17 +40,58 @@ function ChatWorkspace({ projectId, conversationId }) {
   };
 
   const handleSendMessage = async (content) => {
+    // Reset the streaming buffer for a fresh reply.
+    setStreamingContent('');
+    setDisplayedContent('');
+    setIsStreaming(true);
+    setIsStreamFinal(false);
+
     try {
-      // Send through the AI endpoint: it saves the user message,
-      // generates an AI reply, saves it, and returns both.
-      await conversationService.sendChatMessage(conversationId, content);
-      // Trigger message list refresh
-      setMessageRefreshKey(prev => prev + 1);
+      await conversationService.streamChatMessage(conversationId, content, {
+        // The user message is saved server-side as soon as the stream starts.
+        onStart: () => setMessageRefreshKey(prev => prev + 1),
+        // Accumulate tokens here; a separate effect reveals them.
+        onToken: (token) => setStreamingContent(prev => prev + token),
+        onDone: () => setIsStreamFinal(true),
+        onError: (message) => {
+          setIsStreaming(false);
+          setStreamingContent('');
+          setDisplayedContent('');
+          setError(message);
+        },
+      });
     } catch (err) {
-      console.error('Failed to send message:', err);
+      console.error('Failed to stream message:', err);
+      setIsStreaming(false);
+      setStreamingContent('');
+      setDisplayedContent('');
       throw err;
     }
   };
+
+  // Reveal the reply a few characters at a time so streaming is visible,
+  // even when the whole reply arrives in one fast chunk.
+  useEffect(() => {
+    if (displayedContent.length >= streamingContent.length) return;
+    const timer = setTimeout(() => {
+      const remaining = streamingContent.length - displayedContent.length;
+      const step = Math.max(2, Math.ceil(remaining / 15));
+      setDisplayedContent(streamingContent.slice(0, displayedContent.length + step));
+    }, 16);
+    return () => clearTimeout(timer);
+  }, [streamingContent, displayedContent]);
+
+  // Once the server is done AND the reveal has caught up, clean up and reload
+  // so the saved assistant message replaces the temporary streaming bubble.
+  useEffect(() => {
+    if (!isStreamFinal) return;
+    if (displayedContent.length < streamingContent.length) return;
+    setIsStreaming(false);
+    setIsStreamFinal(false);
+    setStreamingContent('');
+    setDisplayedContent('');
+    setMessageRefreshKey(prev => prev + 1);
+  }, [isStreamFinal, displayedContent, streamingContent]);
 
   if (loading) {
     return (
@@ -115,7 +160,12 @@ function ChatWorkspace({ projectId, conversationId }) {
     <div className="flex flex-col h-full">
       {/* Message List */}
       <div className="flex-1 overflow-y-auto">
-        <MessageList conversationId={conversationId} refreshKey={messageRefreshKey} />
+        <MessageList
+          conversationId={conversationId}
+          refreshKey={messageRefreshKey}
+          streamingContent={displayedContent}
+          isStreaming={isStreaming}
+        />
       </div>
 
       {/* Message Composer */}

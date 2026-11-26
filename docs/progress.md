@@ -3,7 +3,7 @@
 ## Current Status
 
 **Date**: 2026-11-25
-**Current Phase**: V3.11 - AI Orchestration Layer (M1 complete, M2 streaming pending)
+**Current Phase**: V3.11 - AI Orchestration Layer (Completed) → next V3.12
 **Overall Progress**: Phase 11 of 20 (55%)
 
 ## Pre-V3 Work Completed
@@ -455,8 +455,8 @@
 - **Unfinished Work**: None
 - **Completion Date**: 2026-11-25
 
-### V3.11: AI Orchestration Layer (M1: Non-Streaming Chat)
-- **Status**: [~] In Progress (M1 complete, M2 streaming pending)
+### V3.11: AI Orchestration Layer
+- **Status**: [x] Completed (M1 non-streaming + M2 streaming)
 - **What Was Implemented**:
   - AI service (`services/ai_service.py`) calling OpenRouter via the OpenAI-compatible SDK
   - Model fallback chain (primary `google/gemini-2.5-flash-lite` -> fallback `google/gemini-2.5-flash`) to survive provider 429 rate limits
@@ -467,6 +467,8 @@
   - Timestamp fix: timezone-aware UTC storage; legacy naive timestamps normalized to UTC in API responses; browser renders local time
   - Frontend: `conversationService.sendChatMessage`; chat now displays real AI replies
   - Chat UI date grouping (Today / Yesterday / date headings); conversation list shows "Today, time" / "Yesterday"
+  - **M2 Streaming**: `POST /chat/stream` (Server-Sent Events); `ai_service.stream_reply()` async generator; frontend `fetch` + `ReadableStream` reader
+  - **M2 UI**: client-side typewriter reveal (visible even for instant replies), 3-dot typing indicator, blinking caret, and auto-scroll that follows the growing reply
 - **Files Created**:
   - `backend/services/__init__.py`
   - `backend/services/ai_service.py` - OpenRouter client + model fallback chain
@@ -490,14 +492,18 @@
   - ✅ AI failure returns 502 and preserves the user message
   - ✅ Timestamps display in the viewer's local timezone
   - ✅ Messages group under Today / Yesterday / date headings
+  - ✅ M2: reply streams token-by-token; live bubble with typing indicator and caret
+  - ✅ M2: screen auto-scrolls following the growing reply
+  - ✅ M2: refresh after streaming shows the saved full reply (no data loss)
+  - ✅ M2: non-streaming POST /chat/ retained as a fallback
 - **Known Limitations**:
   - Context limit is message-count based (20), not token-counted
   - Full Project Memory is injected (no relevance filtering yet -> RAG in V3.14)
-  - No streaming yet (M2)
-  - No AI tool calling yet (V3.12)
-- **Next Phase**: V3.11 M2 - Streaming responses
-- **Unfinished Work**: Streaming (M2)
-- **Completion Date**: -
+  - No AI tool calling yet (V3.12): the AI receives panel *metadata* only, not the image
+  - Context bound is message-count based (not token-counted)
+- **Next Phase**: V3.12 - Tool Calling System Migration
+- **Unfinished Work**: None
+- **Completion Date**: 2026-11-26
 
 ### V3.12-V3.20
 - **Status**: [ ] Not Started
