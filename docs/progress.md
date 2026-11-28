@@ -5,6 +5,7 @@
 **Date**: 2026-11-25
 **Current Phase**: V3.11 - AI Orchestration Layer (Completed) → next V3.12
 **Overall Progress**: Phase 11 of 20 (55%)
+**Product Direction**: Creator-focused (Option B). Versions are cumulative milestones of one application; V4 = Manga Intelligence, V5 = Visual Creation Studio. Collaboration is best-effort. Guiding principle: keep the concepts, cut the cathedrals.
 
 ## Pre-V3 Work Completed
 

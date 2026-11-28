@@ -268,10 +268,63 @@ This document records important architectural and design decisions made during M
 
 ---
 
+## Product Direction Decisions (V4 and beyond)
+
+### Chosen product direction: Creator-focused
+**Date**: 2026-11-28
+**Context**: Two long-term visions were considered - (A) a learning + creation platform, and (B) a creator-focused production platform.
+**Decision**: Commit to Option B, the creator-focused platform.
+**Rationale**:
+- Continues directly from V2/V3 (projects, conversations, tool calling, project memory, panels, references)
+- Matches the existing V3 roadmap (tool calling -> multimodal -> RAG -> image generation)
+- Its promises are testable; A's hardest promises (adaptive skill tracking, artwork critiquing) are easy to fake and hard to do well
+- Beginners are still supported through project-aware Q&A and AI image generation, without building a learning platform
+**Alternatives Considered**: Option A (learning + creation), a creator-first hybrid
+**Trade-offs**: MangaCraft will not teach drawing fundamentals through structured lessons
+
+### Version relationship model: cumulative milestones
+**Date**: 2026-11-28
+**Context**: Should later versions replace earlier ones after deployment?
+**Decision**: Treat versions as cumulative milestones of a single, continuously deployed application.
+**Rationale**:
+- V4 requires V3 (auth, projects, AI orchestration, memory); V5 requires V4. Each builds on the last.
+- One deployment; every push to the main branch reflects the new features.
+- Nothing is erased: a later version contains all earlier functionality.
+**Alternatives Considered**: Separate apps per version (duplication, fragmentation)
+**Implementation Notes**:
+- Git: `main` stays deployable; use feature branches per phase; tag releases (e.g. `v3.0.0`) for snapshots.
+
+### Collaboration: kept but best-effort
+**Date**: 2026-11-28
+**Context**: Should collaboration (V6) be a core goal?
+**Decision**: Keep collaboration as a desirable, best-effort capability - not an essential pillar.
+**Rationale**:
+- MangaCraft will be deployed, so visitors may want to collaborate
+- But real-time editing introduces a new discipline (WebSockets, Yjs/CRDT) that is premature without real users
+- Cheap, useful pieces (permissions, activity/version history) can come earlier; heavy live-edit tooling only when needed
+**Alternatives Considered**: Drop collaboration entirely, or make it a core pillar
+**Trade-offs**: Live collaborative editing is deferred until a concrete need appears
+
+### AI cost protection & deployment access model
+**Date**: 2026-11-28
+**Context**: The app uses a single OpenRouter API key, so every user's chat spends the owner's balance. A public deployment with open registration and no limits would be drained (including by scripted abuse).
+**Decision**: Deploy privately first; before allowing other users, require login and enforce per-user AI limits. Treat BYOK (bring-your-own-key) as the option for fully open access.
+**Rationale**:
+- The single key cannot distinguish users; whoever chats, the owner pays.
+- The most expensive part is the re-sent project briefing + last 20 messages on every turn; the history cap is already the main cost lever.
+- Per-user caps (rate limiting, V3.19) turn unpredictable cost into bounded cost.
+- BYOK shifts cost to the user and removes drain risk for open access.
+**Alternatives Considered**: Open registration with owner-paid key (rejected: drain risk); subscriptions (deferred to V8)
+**Trade-offs**: Limits reduce convenience; BYOK adds user friction
+
+---
+
 ## Future Decisions
 
 These decisions will be made when the relevant phase is implemented:
 
+- V4+ Manga Intelligence details (character/relationship/story models, continuity approach)
+- Whether a graph database (e.g. Neo4j) is ever justified over MongoDB relationships
 - RAG implementation details (chunking strategy, embedding model)
 - Vector search configuration (indexing, similarity thresholds)
 - Image generation provider abstraction details
