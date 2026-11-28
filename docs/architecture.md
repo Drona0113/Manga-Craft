@@ -50,6 +50,25 @@ External Services
     └── Object Storage (S3-compatible)
 ```
 
+## Product Version Model (Cumulative Milestones)
+
+V3, V4, V5… are milestones of ONE application, not separate applications.
+
+- Each version is built on top of the previous one; nothing is erased.
+- V4 = all of V3 + manga intelligence. V5 = all of V4 + the visual studio. The application grows; it is never replaced.
+- Deployment is continuous: one running app, updated as new milestones land. We do not deploy "V3" and "V4" as separate systems.
+- Git: `main` stays deployable; use a feature branch per phase; tag releases (e.g. `v3.0.0`) to mark snapshots.
+
+```
+React Frontend (grows: Chat -> Characters -> Story -> Studio)
+    |
+FastAPI Backend (grows: Chat -> Tools -> RAG -> Intelligence)
+    |
+MongoDB (grows: Projects -> Characters -> Relationships -> Timeline)
+```
+
+Guiding principle: **keep the concepts, cut the cathedrals** - add technology only when a real need justifies it.
+
 ## Component Relationships
 
 ### Frontend to Backend

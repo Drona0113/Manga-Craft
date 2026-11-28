@@ -12,6 +12,26 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - **AI**: OpenRouter (LLM + Image Generation)
 - **Storage**: Object Storage (S3-compatible)
 
+## Product Direction (V4 and beyond)
+
+**Chosen direction: Creator-focused (Option B) — "Imagine. Create. Develop. Publish."**
+
+MangaCraft is a creative production platform for manga/comic/webtoon creators. It helps creators organize and produce (characters, world, story, art, panels) and gives them a project-aware AI assistant. It is not an education platform: it does not teach drawing fundamentals or track artistic skill. Beginners are still supported through project-aware Q&A and AI image generation.
+
+**Version model — cumulative milestones of ONE application.**
+V3, V4, V5 are phases of the same app, not separate apps. Each version is built on top of the previous one; nothing is erased. After V3 is deployed, later versions are added to the same deployment.
+
+| Version | Focus |
+|---|---|
+| V3 | Production-ready full-stack AI foundation (current) |
+| V4 | Manga Intelligence: characters, relationships, world, story, continuity |
+| V5 | Visual Creation Studio: character design, storyboard, panel assistant |
+| V6 | Collaboration & Community (best-effort, when a real need appears) |
+| V7 | Advanced AI assistant (folded into V3.12 + V4; no premature frameworks) |
+| V8 | Ecosystem / platform (business layer; not a near-term coding goal) |
+
+**Guiding principle: keep the concepts, cut the cathedrals.** Do not add technology merely to look impressive. Ship each version to the point it is genuinely useful and reliable, then decide whether to continue. A solid V4 that works on real projects is success.
+
 ## 20-Phase Roadmap
 
 ### Milestone 1: Foundation (V3.1–V3.5)
@@ -123,7 +143,7 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 
 #### V3.11: AI Orchestration Layer
 - [x] Completed (M1 non-streaming + M2 streaming)
-- **Goal**: Create the AI orchestration service that manages LLM interactions, context building, and tool routing
+- **Goal**: Create the AI orchestration service that manages LLM interactions and context building (tool routing/calling is deferred to V3.12 and is NOT part of V3.11)
 - **Technologies**: AI service layer, Context builder, OpenRouter integration via OpenAI-compatible SDK, model fallback chain
 - **What is Implemented**: AI service with model fallback, context builder (project + memory + panels briefing), POST /chat/ and POST /chat/stream (SSE) endpoints, bounded recent-message window, UTC-aware timestamps, chat date grouping, typewriter streaming UI with typing indicator + caret and auto-scroll
 - **V2 Functionality Preserved**: V2 AI interactions still work
@@ -203,6 +223,7 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - **V2 Functionality Preserved**: V2 logging unchanged
 - **Tests/Success Criteria**: Structured logs generated, request IDs tracked, errors captured in error tracking, cache hits improve performance
 - **Must Complete Before V3.20**: Logging configured, error tracking tested, metrics verified, caching tested
+- **Rate limiting (must guard BOTH chat endpoints)**: Add a per-user daily AI message cap so the platform's single OpenRouter key cannot be drained by a public deployment. Implement it as a **shared helper/dependency** (not copy-paste) and enforce it in **all** AI entry points - `POST /chat/` (axios, non-streaming) **and** `POST /chat/stream` (fetch/SSE) in `api/chat.py`. Guarding only one endpoint lets abuse bypass the cap via the other. This pairs with the deployment access model (private -> gated + limits -> BYOK) in `decisions.md`.
 
 #### V3.20: V2 Deprecation & Handover
 - [ ] Not Started
@@ -212,6 +233,22 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - **V2 Functionality Preserved**: V2 archived and preserved, V2 can still be run if needed
 - **Tests/Success Criteria**: All V2 data migrates successfully, V3 fully functional without V2, documentation complete, notifications trigger correctly, emails send successfully
 - **Must Complete (Final Phase)**: Migration scripts tested, all V2 functionality verified in V3, documentation complete, notification system tested, email service verified
+
+## V3-UI: Workspace Redesign (Dedicated Workstream)
+
+Not a numbered phase (existing V3 milestones are not renamed). This is a tracked workstream that **must complete before V3.18 (Docker & Deployment)** so the redesigned workspace ships in the V3 deployment.
+
+**Problem**: The current UI reads as "a dashboard + a chat page". MangaCraft is a *creative workspace*, so the project itself should be the center of gravity.
+
+**Target shape** (inspired by Figma / Notion / VS Code):
+- Left rail: the project's world (Chat, Panels, Memory now; Characters, Story, World, Timeline slot in during V4)
+- Center: the active surface (chat, editors) - changes with what the creator is doing
+- Right: context/AI (project intelligence, assistant)
+- Top: project switcher, breadcrumbs, save state
+
+**Timing**: after the features that fill the rail exist (V3.12-V3.15) and before V3.18. Build the shell to be **extensible** - do not fake sections that do not exist yet.
+
+**Status**: [ ] Not Started
 
 ## Migration Strategy
 
@@ -227,3 +264,94 @@ MangaCraft V3 transforms the V2 Gradio prototype into a full-stack application w
 - V2 remains operational during V3 development
 - V2 can be used as fallback during migration
 - V2 archived to `/v2-archived` after V3 completion
+
+## V3 Technical Backlog (Small Items)
+
+Small, concrete improvements to fold into upcoming V3 phases (not separate phases):
+
+- **Compound database indexes** (fold into V3.14 / V3.19): add `(conversation_id, created_at)` on messages and `(project_id, type, updated_at)` on memories, so common filtered + sorted queries use an index instead of scanning and sorting in memory.
+- **Memory search indexing** (fold into V3.14): memory search currently uses an unanchored `$regex` (`api/memories.py`), which cannot use an index. Add a MongoDB text index as a quick win; replace with vector/semantic search in V3.14.
+- **UTC-aware datetime fix** (`models/memory.py`): replace naive `datetime.utcnow` with `datetime.now(timezone.utc)` to match messages/conversations.
+- **Rate limiting / per-user AI caps** (fold into V3.19 before deployment): bound messages per user per day so the platform's single AI key cannot be drained by a public deployment.
+
+## Future Version Roadmaps (V4-V8)
+
+These versions are cumulative milestones of the same application (see "Product Direction"). V4 is detailed because it is next; V5-V8 are outlines that will be refined when we begin each one.
+
+### V4 - Manga Intelligence (Detailed)
+
+**Goal**: Help creators build and keep a consistent manga universe - characters, relationships, world, story, and continuity - with the AI reasoning across it.
+
+**Depends on**: V3 (auth, projects, AI orchestration, tool calling, RAG, storage).
+
+**Phases** (~10, adjusted honestly as we go):
+
+#### V4.1: Character System (Model + API)
+- Character model: name, role, appearance, personality, background, motivations, goals, abilities, image refs
+- CRUD endpoints with ownership checks
+- **Data**: MongoDB `characters` collection
+
+#### V4.2: Character UI
+- Character profiles inside AI Studio (list + detail)
+- Link character images to uploaded references
+
+#### V4.3: Relationships
+- Relationship model: source, target, type (friend/enemy/family/rival/mentor), notes
+- Relationship CRUD + simple relationship view
+
+#### V4.4: Worldbuilding
+- Locations, factions/organizations, world rules, historical events
+- CRUD + UI
+
+#### V4.5: Story Structure
+- Story arcs, chapters, scenes, plot points
+- Connect scenes to characters and locations
+
+#### V4.6: Timeline
+- Chronological events, ordering, and which chapter/scene an event belongs to
+
+#### V4.7: Manga Intelligence Tools
+- Tool-calling tools: `search_characters`, `get_relationships`, `search_story`, `get_timeline` (builds on V3.12)
+
+#### V4.8: Graph-Aware Retrieval
+- RAG that connects entities so questions like "why does C hate the protagonist?" are answered (builds on V3.14)
+- Start with MongoDB relationships; add a graph DB only if proven necessary
+
+#### V4.9: Continuity Checker
+- Detect contradictions (character in two places, conflicting traits, bad event order); explain context; **AI proposes, creator approves**
+
+#### V4.10: Character Development Tracking
+- Track how a character evolves across chapters; keep a history of changes
+
+### V5 - Visual Creation Studio (Outline)
+
+Provisional - refined when we begin.
+- Drawing canvas (evaluate Canvas API + Pointer Events before choosing a library)
+- Brush engine, eraser, undo/redo, layers, selection/transform
+- Colour tools, reference images, stylus pressure, stroke stabilization, export
+- Character design studio (reference sheets, poses, expressions)
+- Storyboard editor (panels, rearrange, dialogue)
+- Panel assistant (composition/camera suggestions)
+- Visual consistency: start simple (side-by-side + AI description); identity tracking only if justified
+- **Not**: training our own image-generation model
+
+### V6 - Collaboration & Community (Outline)
+
+Provisional - refined when a real need appears.
+- Early, cheap: permissions + activity/version history
+- Later: invitations, comments, notifications, portfolios, challenges
+- Heavy (live editing): WebSockets + Yjs/CRDT - only when needed
+
+### V7 - Advanced AI Creative Assistant (Outline)
+
+Provisional - refined when we begin.
+- The agent loop is built in V3.12 (no framework first)
+- Guardrails + human approval for important changes
+- Specialized agents only when a single agent demonstrably fails
+
+### V8 - Ecosystem & Platform (Outline)
+
+Provisional - long-term direction, not a near-term coding goal.
+- Portfolios, publishing, community, templates, marketplace
+- Subscriptions, usage credits, public API
+- Business/infra layer (payments, metering) - revisit only with real demand
